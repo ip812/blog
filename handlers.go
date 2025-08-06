@@ -1,15 +1,15 @@
 package main
 
 import (
-	"database/sql"
 	"embed"
 	"net/http"
 
 	"github.com/go-playground/form"
 	"github.com/go-playground/validator/v10"
 	"github.com/ip812/blog/config"
-	"github.com/ip812/blog/database"
 	"github.com/ip812/blog/logger"
+	"github.com/ip812/blog/templates/views"
+	"github.com/ip812/blog/utils"
 )
 
 //go:embed static
@@ -19,9 +19,9 @@ type Handler struct {
 	config        *config.Config
 	formDecoder   *form.Decoder
 	formValidator *validator.Validate
-	db            *sql.DB
-	queries       *database.Queries
 	log           logger.Logger
+
+	db DBWrapper
 }
 
 func (hnd *Handler) StaticFiles() http.Handler {
@@ -39,6 +39,10 @@ func (hnd *Handler) Healthz(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte{})
 }
 
-func (hnd *Handler) HomeRedirect(w http.ResponseWriter, r *http.Request) {
+func (hnd *Handler) LandingPageRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/p/public/home", http.StatusFound)
+}
+
+func (hnd *Handler) LandingPageView(w http.ResponseWriter, r *http.Request) {
+	utils.Render(w, r, views.LandingPage())
 }

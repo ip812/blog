@@ -1,7 +1,12 @@
 package status
 
 import (
+	"fmt"
 	"net/http"
+)
+
+var (
+	ErrDatabaseNotReady = fmt.Errorf("database not initialized")
 )
 
 func ErrorNotFound(err error) Toast {

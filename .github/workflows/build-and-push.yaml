@@ -1,0 +1,56 @@
+---
+name: Build and push images
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build-and-push-image-to-ecr:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Git LFS
+      run: |
+        git lfs install
+        git lfs pull
+
+    - name: Log in to GHCR with PAT
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GH_ACCESS_TOKEN }}
+
+    - name: Build image
+      run: |
+        docker build -t iypetrov/blog:${{ github.ref_name }} .
+
+    - name: Tag & Push to GHCR
+      run: |
+        docker tag iypetrov/blog:${{ github.ref_name }} ghcr.io/iypetrov/blog:${{ github.ref_name }}
+        docker push ghcr.io/iypetrov/blog:${{ github.ref_name }}
+
+  update-image:
+    needs: build-and-push-image-to-ecr
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger update image
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          repository: "ip812/infra"
+          event-type: update-image
+          client-payload: |
+            {
+              "image_name": "ghcr.io/iypetrov/blog",
+              "image_tag": "${{ github.ref_name }}",
+              "commit_url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+            }

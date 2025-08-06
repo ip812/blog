@@ -25,7 +25,9 @@ func New(cfg *config.Config) Logger {
 		}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		zerolog.TimeFieldFormat = time.RFC3339
-		zerolog.TimestampFunc = time.Now().UTC
+		zerolog.TimestampFunc = func() time.Time {
+			return time.Now().UTC()
+		}
 		return &LoggerLocal{
 			Log: &log,
 		}
@@ -34,7 +36,9 @@ func New(cfg *config.Config) Logger {
 	log = zerolog.New(os.Stdout).With().Timestamp().Logger()
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	zerolog.TimeFieldFormat = time.RFC3339
-	zerolog.TimestampFunc = time.Now().UTC
+	zerolog.TimestampFunc = func() time.Time {
+		return time.Now().UTC()
+	}
 	return &LoggerProd{
 		Log: &log,
 	}

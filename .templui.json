@@ -3,5 +3,5 @@
   "utilsDir": "utils",
   "moduleName": "github.com/ip812/blog",
   "jsDir": "static/js",
-  "jsPublicPath": "static/js"
+  "jsPublicPath": "/static/js"
 }

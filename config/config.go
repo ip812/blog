@@ -36,18 +36,12 @@ type Config struct {
 		Username string
 		Password string
 	}
-
-	AWS struct {
-		AccessKeyID    string
-		SecretAcessKey string
-		Region         string
-	}
 }
 
 func New() *Config {
 	cfg := &Config{}
 
-	cfg.App.Env = Environment(os.Getenv("APP_ENV"))
+	cfg.App.Env = env
 	if !cfg.App.Env.IsValid() {
 		cfg.App.Env = Prod
 	}
@@ -64,9 +58,6 @@ func New() *Config {
 	cfg.Database.SSLMode = os.Getenv("DB_SSL_MODE")
 	cfg.Database.Username = os.Getenv("DB_USERNAME")
 	cfg.Database.Password = os.Getenv("DB_PASSWORD")
-	cfg.AWS.AccessKeyID = os.Getenv("AWS_ACCESS_KEY_ID")
-	cfg.AWS.SecretAcessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-	cfg.AWS.Region = os.Getenv("AWS_REGION")
 
 	return cfg
 }
