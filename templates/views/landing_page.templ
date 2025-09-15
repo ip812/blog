@@ -2,50 +2,35 @@ package views
 
 import (
 	"github.com/ip812/blog/templates"
-	"github.com/ip812/blog/templates/icon"
 )
 
 templ LandingPage() {
 	@templates.Base() {
+           <div>
+             <div class="hidden md:flex mt-3 lg:mt-4 uppercase tracking-wide text-xs spaced-x-6">
+               <a href="/articles" class="text-grey-dark font-semibold no-underline hover:text-black">Articles</a>
+               <a href="/projects" class="text-grey-dark font-semibold no-underline hover:text-black">Projects</a>
+             </div>
+           </div>
+
 		<div class="min-h-screen w-full flex flex-col">
-			<nav class="w-full">
-				<div class="max-w-6xl mx-auto px-6 py-4 flex justify-end items-center space-x-4">
-					<a href="https://github.com/your-github" target="_blank">@icon.Github(icon.Props{Size: 24, Class: "text-black hover:text-blue-600"})</a>
-					<a href="https://linkedin.com/in/your-linkedin" target="_blank">@icon.Linkedin(icon.Props{Size: 24, Class: "text-black hover:text-blue-600"})</a>
-					<a href="https://twitter.com/your-twitter" target="_blank">@icon.Twitter(icon.Props{Size: 24, Class: "text-black hover:text-blue-600"})</a>
-				</div>
-			</nav>
 			<div class="flex-grow flex items-center justify-center">
 				<div class="max-w-6xl w-full px-6 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 					<div class="flex flex-col items-center md:items-start justify-center h-full text-center md:text-left space-y-4 max-w-md">
-						<div class="w-full flex flex-col items-center justify-center mb-6">
-							<img src="/static/me.jpg" alt="Profile Photo" class="max-w-md h-auto rounded-xl shadow-lg"/>
+						<div class="w-full flex flex-row items-center justify-center mb-6">
+                            <img class="h-10 w-10 md:h-12 md:w-12 lg:h-20 lg:w-20 rounded-full" src="https://avatars.githubusercontent.com/u/72142537" alt="">
+                            <h3>Ilia Petrov</h3>
 						</div>
 						<p class="text-xl leading-relaxed max-w-md text-center">
 							I'm a software engineer from Sofia, Bulgaria who is passionate about
 							<span class="font-semibold">Go</span>, <span class="font-semibold">Cloud</span>, and <span class="font-semibold">DevOps</span>.
+                            I am an OSS contributor to Jaeger and OpenTelemetry and I blog about my experiences for my work and side projects.
 						</p>
 					</div>
-                    <div class="flex flex-col items-start justify-start h-full space-y-4">
-                    	<h2 class="text-3xl font-bold">Latest Articles</h2>
-                    	<div class="max-h-[400px] overflow-y-auto pr-2 custom-scroll w-full">
-                    		<ul class="space-y-4">
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    			<li><a href="#" class="text-blue-600 hover:underline">Zero trust homelab</a> - 10.10.2025</li>
-                    		</ul>
-                    	</div>
-                    </div>
 				</div>
 			</div>
-			<footer class="py-4 text-center text-sm text-gray-600">
-				&copy; 2025 Ilia Petrov. All rights reserved.
-			</footer>
+            @templates.Footer()
 		</div>
 	}
+
 }
