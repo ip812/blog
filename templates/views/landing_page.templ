@@ -6,31 +6,33 @@ import (
 
 templ LandingPage() {
 	@templates.Base() {
-           <div>
-             <div class="hidden md:flex mt-3 lg:mt-4 uppercase tracking-wide text-xs spaced-x-6">
-               <a href="/articles" class="text-grey-dark font-semibold no-underline hover:text-black">Articles</a>
-               <a href="/projects" class="text-grey-dark font-semibold no-underline hover:text-black">Projects</a>
-             </div>
-           </div>
+		<div class="flex flex-col min-h-screen justify-between w-full">
+            <nav class="w-full flex justify-center py-4 text-base-100">
+                <div class="flex gap-12">
+                    <a href="/articles" 
+                       class="text-xl font-bold hover:underline cursor-pointer">
+                        Articles
+                    </a>
+                    <a href="/projects" 
+                       class="text-xl font-bold hover:underline cursor-pointer">
+                        Projects
+                    </a>
+                </div>
+            </nav>
 
-		<div class="min-h-screen w-full flex flex-col">
-			<div class="flex-grow flex items-center justify-center">
-				<div class="max-w-6xl w-full px-6 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-					<div class="flex flex-col items-center md:items-start justify-center h-full text-center md:text-left space-y-4 max-w-md">
-						<div class="w-full flex flex-row items-center justify-center mb-6">
-                            <img class="h-10 w-10 md:h-12 md:w-12 lg:h-20 lg:w-20 rounded-full" src="https://avatars.githubusercontent.com/u/72142537" alt="">
-                            <h3>Ilia Petrov</h3>
-						</div>
-						<p class="text-xl leading-relaxed max-w-md text-center">
-							I'm a software engineer from Sofia, Bulgaria who is passionate about
-							<span class="font-semibold">Go</span>, <span class="font-semibold">Cloud</span>, and <span class="font-semibold">DevOps</span>.
-                            I am an OSS contributor to Jaeger and OpenTelemetry and I blog about my experiences for my work and side projects.
-						</p>
-					</div>
-				</div>
-			</div>
+            <div class="flex flex-col items-center justify-center flex-1 text-center px-4">
+                <div class="flex items-center space-x-4 mb-6">
+                    <img class="h-16 w-16 rounded-full object-cover" src="https://avatars.githubusercontent.com/u/72142537" alt="Ilia Petrov"/>
+                    <h3 class="text-3xl md:text-4xl font-semibold">Ilia Petrov</h3>
+                </div>
+                <p class="text-lg md:text-xl max-w-md leading-relaxed">
+                    I'm a software engineer from Sofia, Bulgaria who is passionate about
+                    <span class="font-semibold">Go</span>, <span class="font-semibold">Cloud</span>, and <span class="font-semibold">DevOps</span>.
+                    I am an OSS contributor to Jaeger and OpenTelemetry and I blog here about my side projects and experiences.
+                </p>
+            </div>
+
             @templates.Footer()
-		</div>
+        </div>
 	}
-
 }
