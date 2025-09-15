@@ -1,0 +1,38 @@
+package views
+
+import (
+	"github.com/ip812/blog/templates"
+)
+
+templ Projects() {
+	@templates.Base() {
+		<div class="flex flex-col min-h-screen justify-between w-full">
+            <nav class="w-full flex justify-center py-4 text-base-100">
+                <div class="flex gap-12">
+                    <a href="/articles" 
+                       class="text-xl font-bold hover:underline cursor-pointer">
+                        Articles
+                    </a>
+                    <a href="/projects" 
+                       class="text-xl font-bold hover:underline cursor-pointer">
+                        Projects
+                    </a>
+                </div>
+            </nav>
+
+            <div class="flex flex-col items-center justify-center flex-1 text-center px-4">
+                <div class="flex items-center space-x-4 mb-6">
+                    <img class="h-16 w-16 rounded-full object-cover" src="https://avatars.githubusercontent.com/u/72142537" alt="Ilia Petrov"/>
+                    <h3 class="text-3xl md:text-4xl font-semibold">Ilia Petrov</h3>
+                </div>
+                <p class="text-lg md:text-xl max-w-md leading-relaxed">
+                    I'm a software engineer from Sofia, Bulgaria who is passionate about
+                    <span class="font-semibold">Go</span>, <span class="font-semibold">Cloud</span>, and <span class="font-semibold">DevOps</span>.
+                    I am an OSS contributor to Jaeger and OpenTelemetry and I blog here about my side projects and experiences.
+                </p>
+            </div>
+
+            @templates.Footer()
+        </div>
+	}
+}

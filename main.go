@@ -143,7 +143,7 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 	mux.Handle("/static/*", handler.StaticFiles())
 	mux.With().Route("/p", func(mux chi.Router) {
 		mux.Route("/public", func(mux chi.Router) {
-			mux.Get("/home", handler.LandingPageView)
+			mux.Get("/landing-page", handler.LandingPageView)
 		})
 	})
 

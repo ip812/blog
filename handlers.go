@@ -40,7 +40,7 @@ func (hnd *Handler) Healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func (hnd *Handler) LandingPageRedirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/p/public/home", http.StatusFound)
+	http.Redirect(w, r, "/p/public/landing-page", http.StatusFound)
 }
 
 func (hnd *Handler) LandingPageView(w http.ResponseWriter, r *http.Request) {
