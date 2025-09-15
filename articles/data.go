@@ -22,6 +22,6 @@ var Metadata = []ArticleMetadata{
 	newArticle(
 		1417231583613554688,
 		"Zero trust homelab",
-		"My homelad setup using Terraform, Helm, CLoudflare, Tailscale and more...",
+		"My homelab setup using Terraform, Helm, Cloudflare, Tailscale and more...",
 	),
 }
