@@ -39,10 +39,14 @@ func (hnd *Handler) Healthz(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte{})
 }
 
-func (hnd *Handler) LandingPageRedirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/p/public/landing-page", http.StatusFound)
-}
-
 func (hnd *Handler) LandingPageView(w http.ResponseWriter, r *http.Request) {
 	utils.Render(w, r, views.LandingPage())
+}
+
+func (hnd *Handler) ArticlesView(w http.ResponseWriter, r *http.Request) {
+	utils.Render(w, r, views.Articles())
+}
+
+func (hnd *Handler) ProjectsView(w http.ResponseWriter, r *http.Request) {
+	utils.Render(w, r, views.Projects())
 }

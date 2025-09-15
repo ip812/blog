@@ -2,6 +2,7 @@ package views
 
 import (
 	"github.com/ip812/blog/utils"
+	"github.com/ip812/blog/articles"
 	"github.com/ip812/blog/templates"
 	"github.com/ip812/blog/templates/button"
 
@@ -9,30 +10,7 @@ import (
 	"github.com/godruoyi/go-snowflake"
 )
 
-var ProjectsData = []struct {
-	Name        string
-	URL         string
-	Description string
-    CreatedAt   uint64
-}{
-	{
-		Name: "Terraform Provider gitsync",
-		URL:  "https://github.com/ip812/terraform-provider-gitsync",
-		Description: `A custom Terraform provider that automatically syncs
-			non-sensitive values such as generated URLs, ARNs, and IDs into a
-			Git repository, storing them in a values.yaml file.`,
-        CreatedAt: utils.DiscordEpoch + snowflake.ParseID(1417231583613554688).Timestamp,
-	},
-	{
-		Name: "bfzf Firefox Add-on",
-		URL:  "https://github.com/iypetrov/bfzf",
-		Description: `A lightweight Firefox extension for fast, fuzzy searching
-			through your bookmarks and browsing history.`,
-        CreatedAt: utils.DiscordEpoch + snowflake.ParseID(1287522902635520000).Timestamp,
-	},
-}
-
-templ Projects() {
+templ Articles() {
 	@templates.Base() {
 		<div class="flex flex-col min-h-screen justify-between w-full">
 			<div class="flex flex-1 justify-center">
@@ -45,15 +23,15 @@ templ Projects() {
 						}
 					</div>
 
-					for _, p := range ProjectsData {
+					for _, p := range articles.Metadata {
 						<div>
                             <div class="flex flex-row items-baseline space-x-4">
 							    <a href={templ.SafeURL(p.URL)}
 							       class="text-xl font-bold inline-block underline">
-							    	{p.Name}
+							    	{p.Name}  
 							    </a>
                                 <p class="text-sm text-gray-400 font-bold">
-							    	{time.UnixMilli(int64(p.CreatedAt)).Format("2006-01")}
+                                    {time.UnixMilli(utils.DiscordEpoch + int64(snowflake.ParseID(p.ID).Timestamp)).Format("2006-01")}
                                 </p>
                             </div>
 							<p class="text-gray-700 mt-2">

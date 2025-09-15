@@ -144,6 +144,8 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 	mux.With().Route("/p", func(mux chi.Router) {
 		mux.Route("/public", func(mux chi.Router) {
 			mux.Get("/landing-page", handler.LandingPageView)
+			mux.Get("/articles", handler.ArticlesView)
+			mux.Get("/projects", handler.ProjectsView)
 		})
 	})
 
@@ -153,7 +155,9 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 	})
 
 	mux.Get("/healthz", handler.Healthz)
-	mux.NotFound(handler.LandingPageRedirect)
+	mux.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/p/public/landing-page", http.StatusFound)
+	})
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.App.Port),
