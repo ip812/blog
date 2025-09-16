@@ -1,5 +1,9 @@
 package templates
 
+import (
+	"github.com/ip812/blog/templates/code"
+)
+
 templ Base() {
 	<!DOCTYPE html>
 	<html lang="en">
@@ -16,6 +20,7 @@ templ Base() {
 		</head>
 		<body>
 			@Toast()
+            @code.Script()
 			<div class="relative md:flex font-primary w-screen min-h-screen">
 				{ children... }
 			</div>
