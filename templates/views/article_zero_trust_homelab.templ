@@ -56,6 +56,9 @@ templ ArticleZeroTrustHomelab() {
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
 						<hr class="border-t-2 border-gray-300 mb-6"/>
+                        @components.CommentInputForm(components.CommentInputFormProps{
+                            ArticleID: zeroTrustHomelabMetadata.ID,
+                        })
 
 						@components.Comment(components.CommentProps{
 							Username:  "iypetrov",

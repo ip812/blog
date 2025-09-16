@@ -2,6 +2,7 @@ package templates
 
 import (
 	"github.com/ip812/blog/templates/code"
+	"github.com/ip812/blog/templates/textarea"
 )
 
 templ Base() {
@@ -21,6 +22,7 @@ templ Base() {
 		<body>
 			@Toast()
             @code.Script()
+            @textarea.Script()
 			<div class="relative md:flex font-primary w-screen min-h-screen overflow-x-hidden">
 				{ children... }
 			</div>

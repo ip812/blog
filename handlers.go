@@ -70,3 +70,7 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 func (hnd *Handler) ProjectsView(w http.ResponseWriter, r *http.Request) {
 	utils.Render(w, r, views.Projects())
 }
+
+func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}

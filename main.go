@@ -22,6 +22,7 @@ import (
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/database"
 	"github.com/ip812/blog/logger"
+	"github.com/ip812/blog/utils"
 )
 
 const (
@@ -152,6 +153,9 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 
 	mux.Route("/api", func(mux chi.Router) {
 		mux.Route("/public/v0", func(mux chi.Router) {
+			mux.Route("/articles", func(mux chi.Router) {
+				mux.Post("/{id}", utils.MakeTemplHandler(handler.CreateComment))
+			})
 		})
 	})
 
