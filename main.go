@@ -145,6 +145,7 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 		mux.Route("/public", func(mux chi.Router) {
 			mux.Get("/landing-page", handler.LandingPageView)
 			mux.Get("/articles", handler.ArticlesView)
+			mux.Get("/articles/{id}", handler.ArticleDetailsView)
 			mux.Get("/projects", handler.ProjectsView)
 		})
 	})

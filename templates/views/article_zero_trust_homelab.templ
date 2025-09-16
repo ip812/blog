@@ -1,0 +1,29 @@
+package views
+
+import (
+	"github.com/ip812/blog/articles"
+	"github.com/ip812/blog/templates"
+)
+
+var zeroTrustHomelabMetadata = articles.GetByID(articles.ZeroTrustHomelabID)
+
+templ ArticleZeroTrustHomelab() {
+	@templates.Base() {
+		<div class="flex flex-col min-h-screen justify-between w-full">
+			<div class="flex flex-1 justify-center">
+				<div class="w-1/2 space-y-8 py-12">
+                    <div class="flex flex-row items-baseline space-x-4">
+                        <h3 class="text-xl font-bold inline-block underline">
+                        	{zeroTrustHomelabMetadata.Name}  
+                        </h3>
+                    </div>
+                    <p class="text-gray-700 mt-2">
+                        {zeroTrustHomelabMetadata.Description}  
+                    </p>
+				</div>
+			</div>
+
+			@templates.Footer()
+		</div>
+	}
+}

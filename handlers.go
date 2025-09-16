@@ -3,9 +3,12 @@ package main
 import (
 	"embed"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/form"
 	"github.com/go-playground/validator/v10"
+	"github.com/ip812/blog/articles"
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/logger"
 	"github.com/ip812/blog/templates/views"
@@ -45,6 +48,23 @@ func (hnd *Handler) LandingPageView(w http.ResponseWriter, r *http.Request) {
 
 func (hnd *Handler) ArticlesView(w http.ResponseWriter, r *http.Request) {
 	utils.Render(w, r, views.Articles())
+}
+
+func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		utils.Render(w, r, views.ArticleNotFound())
+		return
+	}
+
+	if id == articles.ZeroTrustHomelabID {
+		utils.Render(w, r, views.ArticleZeroTrustHomelab())
+		return
+	}
+
+	utils.Render(w, r, views.ArticleNotFound())
 }
 
 func (hnd *Handler) ProjectsView(w http.ResponseWriter, r *http.Request) {
