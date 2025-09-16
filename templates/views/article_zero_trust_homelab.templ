@@ -3,6 +3,7 @@ package views
 import (
 	"github.com/ip812/blog/articles"
 	"github.com/ip812/blog/templates"
+	"github.com/ip812/blog/templates/components"
 	"github.com/ip812/blog/templates/button"
 	"github.com/ip812/blog/templates/code"
 )
@@ -26,7 +27,6 @@ templ ArticleZeroTrustHomelab() {
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabMetadata.Name }</h1>
 					</header>
 					<p>
-						Some of the Terraform code snippets in this article are simplified for clarity.
 						Some of the Terraform code snippets in this article are simplified for clarity.
 					</p>
 					<div class="mt-6">
@@ -52,6 +52,32 @@ templ ArticleZeroTrustHomelab() {
 						Some of the Terraform code snippets in this article are simplified for clarity.
 						<a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="underline text-blue-500">Here</a> you can find the video where I demonstrate how I add this blog application on which you are reading at the moment to my homelab.
 					</p>
+
+					<div class="mt-12">
+						<h2 class="text-2xl font-bold mb-4">Comments</h2>
+						<hr class="border-t-2 border-gray-300 mb-6"/>
+
+						@components.Comment(components.CommentProps{
+							Username:  "iypetrov",
+							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+							Content:   "This is a comment component example. You can use it to display comments on your articles.",
+						})
+						@components.Comment(components.CommentProps{
+							Username:  "iypetrov",
+							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+							Content:   "This is a comment component example. You can use it to display comments on your articles.",
+						})
+						@components.Comment(components.CommentProps{
+							Username:  "iypetrov",
+							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+							Content:   "This is a comment component example. You can use it to display comments on your articles.",
+						})
+						@components.Comment(components.CommentProps{
+							Username:  "iypetrov",
+							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+							Content:   "This is a comment component example. You can use it to display comments on your articles.",
+						})
+					</div>
 				</div>
 			</div>
 			@templates.Footer()
