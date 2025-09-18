@@ -1,6 +1,7 @@
 package views
 
 import (
+    "fmt"
 	"github.com/ip812/blog/articles"
 	"github.com/ip812/blog/templates"
 	"github.com/ip812/blog/templates/components"
@@ -59,7 +60,17 @@ templ ArticleZeroTrustHomelab() {
                         @components.CommentInputForm(components.CommentInputFormProps{
                             ArticleID: articles.ZeroTrustHomelabID,
                         })
-                        <div id="comments"></div>
+                        <div 
+                            id="comments"
+                            hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.ZeroTrustHomelabID) }
+		                    hx-target="#comments"
+		                    hx-swap="innerHTML"
+                            hx-trigger="load"
+                        >
+                            <div class="mt-4">
+                                @templates.Spinner() {}
+                            </div>
+                        </div>
 					</div>
 				</div>
 			</div>

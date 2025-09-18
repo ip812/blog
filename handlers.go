@@ -129,6 +129,48 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 		return utils.Render(w, r, components.NoComments())
 	}
 
+	if len(comments) == 0 {
+		return utils.Render(w, r, components.NoComments())
+	}
+
+	commentProps := []components.CommentProps{}
+	for _, c := range comments {
+		commentProps = append(commentProps, components.CommentProps{
+			ID:        uint64(c.ID),
+			Username:  c.Username,
+			AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+			Content:   c.Content,
+		})
+	}
+
+	return utils.Render(w, r, components.Comments(commentProps))
+}
+
+func (hnd *Handler) GetAllCommentsByArticleID(w http.ResponseWriter, r *http.Request) error {
+	db, err := hnd.db.DB()
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
+		return utils.Render(w, r, components.NoComments())
+	}
+
+	queries := database.New(db)
+
+	articleID, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		status.AddToast(w, status.WarningStatusBadRequest(status.WarnNotNumbericID))
+		return utils.Render(w, r, components.NoComments())
+	}
+
+	comments, err := queries.GetAllCommentsByArticleID(r.Context(), int64(articleID))
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(status.ErrGetAllArticleComments))
+		return utils.Render(w, r, components.NoComments())
+	}
+
+	if len(comments) == 0 {
+		return utils.Render(w, r, components.NoComments())
+	}
+
 	commentProps := []components.CommentProps{}
 	for _, c := range comments {
 		commentProps = append(commentProps, components.CommentProps{

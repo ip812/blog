@@ -152,6 +152,7 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 		mux.Route("/public/v0", func(mux chi.Router) {
 			mux.Route("/articles", func(mux chi.Router) {
 				mux.Post("/{id}/comments", utils.MakeTemplHandler(handler.CreateComment))
+				mux.Get("/{id}/comments", utils.MakeTemplHandler(handler.GetAllCommentsByArticleID))
 			})
 		})
 	})
