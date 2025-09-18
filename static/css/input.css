@@ -92,6 +92,8 @@
   }
 }
 
+html, body { overflow-x: hidden; }
+
 .spinner {
     display: none;
 }

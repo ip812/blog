@@ -1,6 +1,8 @@
 package articles
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type ArticleMetadata struct {
 	ID          uint64
@@ -10,6 +12,7 @@ type ArticleMetadata struct {
 }
 
 var (
+	PlaceholderID      uint64 = 1418336861478195200
 	ZeroTrustHomelabID uint64 = 1417231583613554688
 )
 
