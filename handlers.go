@@ -73,7 +73,26 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 	utils.Render(w, r, views.ArticleNotFound())
 }
 
+func getOrSetUsername(w http.ResponseWriter, r *http.Request) string {
+	c, err := r.Cookie(CookieKey)
+	if err != nil {
+		username := generateUsername()
+		http.SetCookie(w, &http.Cookie{
+			Name:     CookieKey,
+			Value:    username,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteStrictMode,
+		})
+		return username
+	}
+	return c.Value
+}
+
 func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error {
+	username := getOrSetUsername(w, r)
+
 	db, err := hnd.db.DB()
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
@@ -110,7 +129,7 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 	_, err = queries.CreateComment(r.Context(), database.CreateCommentParams{
 		ID:        int64(snowflake.ID()),
 		ArticleID: int64(articleID),
-		Username:  "Anonymous",
+		Username:  username,
 		Content:   props.Content,
 	})
 	if err != nil {
@@ -138,7 +157,7 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 		commentProps = append(commentProps, components.CommentProps{
 			ID:        uint64(c.ID),
 			Username:  c.Username,
-			AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+			AvatarURL: getAvatarURL(c.Username),
 			Content:   c.Content,
 		})
 	}
@@ -176,7 +195,7 @@ func (hnd *Handler) GetAllCommentsByArticleID(w http.ResponseWriter, r *http.Req
 		commentProps = append(commentProps, components.CommentProps{
 			ID:        uint64(c.ID),
 			Username:  c.Username,
-			AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
+			AvatarURL: getAvatarURL(c.Username),
 			Content:   c.Content,
 		})
 	}
