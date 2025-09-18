@@ -57,29 +57,9 @@ templ ArticleZeroTrustHomelab() {
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
 						<hr class="border-t-2 border-gray-300 mb-6"/>
                         @components.CommentInputForm(components.CommentInputFormProps{
-                            ArticleID: zeroTrustHomelabMetadata.ID,
+                            ArticleID: articles.ZeroTrustHomelabID,
                         })
-
-						@components.Comment(components.CommentProps{
-							Username:  "iypetrov",
-							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
-							Content:   "This is a comment component example. You can use it to display comments on your articles.",
-						})
-						@components.Comment(components.CommentProps{
-							Username:  "iypetrov",
-							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
-							Content:   "This is a comment component example. You can use it to display comments on your articles.",
-						})
-						@components.Comment(components.CommentProps{
-							Username:  "iypetrov",
-							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
-							Content:   "This is a comment component example. You can use it to display comments on your articles.",
-						})
-						@components.Comment(components.CommentProps{
-							Username:  "iypetrov",
-							AvatarURL: "https://avatars.githubusercontent.com/u/2878733?v=4",
-							Content:   "This is a comment component example. You can use it to display comments on your articles.",
-						})
+                        <div id="comments"></div>
 					</div>
 				</div>
 			</div>

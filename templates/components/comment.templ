@@ -1,0 +1,36 @@
+package components
+
+import (
+	"time"
+	"github.com/ip812/blog/utils"
+	"github.com/godruoyi/go-snowflake"
+)
+
+type CommentProps struct {
+    ID uint64
+	Username string
+    AvatarURL string
+    Content string
+}
+
+templ Comment(props CommentProps) {
+    <div class="flex space-x-4 my-6">
+        <img src={props.AvatarURL} alt="Avatar" class="w-12 h-12 rounded-full"/>
+        <div>
+            <p class="font-bold">{props.Username} 
+                <span class="text-sm text-gray-500">
+                    {time.UnixMilli(int64(utils.DiscordEpoch + snowflake.ParseID(props.ID).Timestamp)).Format("2006-01-02 15:04")}
+                </span>
+            </p>
+            <p class="mt-1">{props.Content}</p>
+        </div>
+    </div>
+}
+
+templ Comments(props []CommentProps) {
+    <div>
+        for _, prop := range props{
+            @Comment(prop)
+        }
+    </div>
+}

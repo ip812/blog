@@ -20,7 +20,6 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/ip812/blog/config"
-	"github.com/ip812/blog/database"
 	"github.com/ip812/blog/logger"
 	"github.com/ip812/blog/utils"
 )
@@ -51,14 +50,14 @@ func main() {
 
 	server := startHTTPServer(cfg, log, swappableDB)
 
-	db, queries, err := connectToDatabaseWithRetry(ctx, cfg, log)
+	db, err := connectToDatabaseWithRetry(ctx, cfg, log)
 	if err != nil {
 		log.Error("exiting: could not connect to DB after retries: %s", err.Error())
 		return
 	}
 	defer db.Close()
 
-	swappableDB.Swap(db, queries)
+	swappableDB.Swap(db)
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		log.Error("failed to set dialect: %s", err.Error())
@@ -80,11 +79,10 @@ func main() {
 }
 
 type dbConnection struct {
-	db      *sql.DB
-	queries *database.Queries
+	db *sql.DB
 }
 
-func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log logger.Logger) (*sql.DB, *database.Queries, error) {
+func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log logger.Logger) (*sql.DB, error) {
 	var conn dbConnection
 
 	connectionString := fmt.Sprintf(
@@ -115,7 +113,6 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 		log.Info("connected to database")
 
 		conn.db = db
-		conn.queries = database.New(db)
 		return conn, nil
 	}
 
@@ -125,7 +122,7 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 		backoff.WithMaxElapsedTime(retryMaxElapsedTime),
 	)
 
-	return conn.db, conn.queries, err
+	return conn.db, err
 }
 
 func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.Server {
@@ -154,7 +151,7 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 	mux.Route("/api", func(mux chi.Router) {
 		mux.Route("/public/v0", func(mux chi.Router) {
 			mux.Route("/articles", func(mux chi.Router) {
-				mux.Post("/{id}", utils.MakeTemplHandler(handler.CreateComment))
+				mux.Post("/{id}/comments", utils.MakeTemplHandler(handler.CreateComment))
 			})
 		})
 	})

@@ -1,6 +1,7 @@
 package components
 
 import (
+    "fmt"
     "github.com/ip812/blog/templates"
     "github.com/ip812/blog/templates/button"
     "github.com/ip812/blog/templates/textarea"
@@ -13,13 +14,13 @@ type CommentInputFormProps struct {
 
 templ CommentInputForm(props CommentInputFormProps) {
 	<form
-		hx-post="/api/public/v0/articles/{props.ArticleID}"
+        hx-post={ fmt.Sprintf("/api/public/v0/articles/%d/comments", props.ArticleID) }
 		hx-target="#comments"
-		hx-swap="outerHTML"
+		hx-swap="innerHTML"
+        hx-on::after-request="this.querySelector('[name=Content]').value = ''"
 		class="flex flex-row justify-center items-center w-full space-x-6"
 	>
             @textarea.Textarea(textarea.Props{
-            	ID:          "comment-content",
             	Name:        "Content",
             	Value:       props.Content,
             	Placeholder: "Your comment...",
