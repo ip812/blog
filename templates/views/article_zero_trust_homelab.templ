@@ -125,7 +125,6 @@ templ ArticleZeroTrustHomelab() {
                         Also this removes the need of NAT gateway, which is a paid resource that I want to avoid for cost-saving reasons. 
                         But now the big questions arise: how do I expose my services to the internet and how do I access the cluster securely?
                         Well, the rest of the article will be dedicated to answering these two questions. 
-                        At the end the name of the article is zero-trust homelab, right?
                     </p>
 
                     <p class="mt-2 mb-0">
@@ -174,9 +173,41 @@ templ ArticleZeroTrustHomelab() {
                     </div>
                     <p class="my-0">
                         I map each target hostname directly to its corresponding Kubernetes service.
-                        The Cloudflare Tunnel daemon runs as a regular pod, not as an Ingress or Gateway.
-                        This approach is flexible enough to work with Docker Compose or even on a bare-metal server.
+                        The Cloudflare Tunnel daemon runs as a regular pod rather than as an Ingress or Gateway, making the setup flexible enough to work with Docker Compose or even on a bare-metal server.
+                        This approach does have limitations. According to Cloudflare’s documentation, a single tunnel can handle roughly 4,000 concurrent users, and tunnels aren’t recommended for serving large media files such as images or videos—the sweet spot is small to medium REST APIs.
+                        To address that, I serve all images and other static assets from Cloudflare R2 buckets. R2 has no egress fees, so I can deliver as much content as I need without worrying about bandwidth costs. You can attach a custom domain to an R2 bucket, which makes it publicly accessible and automatically provides CDN caching, DDoS protection, and TLS termination at no extra charge.
+                        Combined with R2’s lower storage price compared to AWS S3, this ends up being a very cost-effective solution.
+                        This is how I configure the R2 bucket for serving static assets:
                     </p>
+					<div class="my-0">
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeFull,
+						}) {
+							{ 
+`resource "cloudflare_r2_bucket" "blog_bucket" {
+  account_id    = var.cf_account_id
+  name          = "${var.org}-${var.blog_db_name}-bucket"
+  location      = "EEUR"
+  storage_class = "Standard"
+}
+
+output "blog_bucket_endpoint" {
+  value = cloudflare_r2_bucket.blog_bucket.name
+}
+
+resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
+  account_id  = var.cf_account_id
+  bucket_name = cloudflare_r2_bucket.blog_bucket.name
+  domain      = "static.${var.blog_domain}.${var.org}.com"
+  enabled     = true
+  zone_id     = var.cf_ip812_zone_id
+  min_tls     = "1.0"
+}` }
+                        }
+                    </div>
+
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
