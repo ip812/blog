@@ -24,10 +24,10 @@ templ ArticleZeroTrustHomelab() {
 						}
 					</div>
 
-					<header class="flex flex-col w-full justify-center items-center mb-2">
+					<header class="flex flex-col w-full justify-center items-center mb-4">
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabMetadata.Name }</h1>
 					</header>
-                    <p class="mb-2">
+                    <p class="mb-4">
                         As a developer, I have always wanted to create a small homelab where I can play around with different technologies and ideas,
                         but these questions always come up:
                     </p>
@@ -41,7 +41,7 @@ templ ArticleZeroTrustHomelab() {
                         After some research and a lot of iterations, I would like to share with you my current
                         setup, what trade-offs I made, and what I learned along the way.
                     </p>
-                    <p class="mt-2 mb-0">
+                    <p class="mt-4 mb-0">
                        Let's start from more generic technical choices and then move to more specific ones. My homelab is hosted on
                        a single AWS EC2 instance, where I run a single-node Kubernetes cluster using k3s.
                        You may ask why I picked Kubernetes instead of just running Docker container, why I picked AWS instead of DigitalOcean, etc. - 
@@ -69,7 +69,7 @@ templ ArticleZeroTrustHomelab() {
                             without extra management overhead.
                         </li>
                     </ul>
-                    <p class="mt-2 mb-0">
+                    <p class="mt-4 mb-0">
                         <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-aws-architecture.drawio.png" alt="AWS Architecture"/>
                             Let’s explore the architecture, moving from the overall setup to the individual components. 
                             The diagram above shows the high-level AWS view: a single VPC with two public subnets across different availability zones. 
@@ -127,7 +127,7 @@ templ ArticleZeroTrustHomelab() {
                         Well, the rest of the article will be dedicated to answering these two questions. 
                     </p>
 
-                    <p class="mt-2 mb-0">
+                    <p class="mt-4 mb-0">
                         Let’s start with the first question: how do I expose my services to the internet?
                         For everything that needs to be public, I rely on Cloudflare.
                         You probably know Cloudflare for its fast CDN and excellent DDoS protection (with a very generous free tier), 
@@ -203,7 +203,7 @@ resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
 }` }
                         }
                     </div>
-                    <p class="mt-2 mb-0">
+                    <p class="mt-4 mb-0">
                         We’ve covered how to expose services to the internet. Now let’s tackle the second question: how do I access the cluster securely?
                         Since my workloads run on AWS, I can use AWS Systems Session Manager (SSM) to connect to the EC2 instance without opening any inbound ports—a great feature that works out of the box on most Amazon-provided AMIs.
                         But what if you’re running on another cloud provider, on-premises, or in a hybrid environment?
@@ -272,14 +272,15 @@ spec:
                        On this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
                     </p>
 
-                    <p class="mt-2 mb-0">
-                        Probably the last thing worth mentioning is that that I manage my cloud resources and Kubernetes objects using Terraform using Helm provider.
-                        I chose this approach, because of two reasons:
+                    <p class="mt-4 mb-0">
+                        Probably the last thing worth mentioning is that I manage my cloud resources and Kubernetes objects using Terraform leveraging Helm provider.
+                        I chose this approach, due to two reasons:
                     </p>
                     <ul class="list-disc list-inside mt-0 mb-0">
                         <li>
                             It is simpler to manage everything in a single place using one tool, instead of uisng GitOps tools like ArgoCD or FluxCD. 
-                            For more comlex setups, GitOps tools are better fit, but for my homelab this is OK, who knows, maybe in the future I will switch to Flux.
+                            For more comlex setups, GitOps tools are better fit, but for my homelab this is OK.
+                            Who knows, maybe in the future I will switch to Flux.
                         </li>
                         <li>
                             When I use Terraform to manage Kubernetes objects, I can dynamically pass auto-generated values from cloud resources to the cluster.
@@ -292,7 +293,7 @@ spec:
                             If you find it interesting, you can star the repo, it will motivate me to continue working on it.
                         </li>
                     </ul>
-                    <p class="mt-2 mb-0">
+                    <p class="mt-4 mb-0">
                         So this is how I built my fully functional homelab with zero open inbound ports, using a combination of AWS, Kubernetes, Cloudflare, and Tailscale.
                         To summarize, I hope you found this article interesting and that it gave you some ideas for your own homelab.
                         If you have any questions or suggestions, feel free to connect with me on the social media or to write a comment below.
