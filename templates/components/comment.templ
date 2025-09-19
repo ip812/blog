@@ -22,7 +22,7 @@ templ Comment(props CommentProps) {
                     {time.UnixMilli(int64(utils.DiscordEpoch + snowflake.ParseID(props.ID).Timestamp)).Format("2006-01-02 15:04")}
                 </span>
             </p>
-            <p class="mt-1">{props.Content}</p>
+            <p class="mt-1 break-all">{props.Content}</p>
         </div>
     </div>
 }
