@@ -37,14 +37,14 @@ templ ArticleZeroTrustHomelab() {
                         <li>How can I access it securely?</li>
                         <li>How can I back up all my information and restore it reliably?</li>
                     </ul>
-                    <p class="mt-0">
+                    <p class="mt-0 mb-0">
                         After some research and a lot of iterations, I would like to share with you my current
                         setup, what trade-offs I made, and what I learned along the way.
                     </p>
                     <p class="mt-2 mb-0">
                        Let's start from more generic technical choices and then move to more specific ones. My homelab is hosted on
                        a single AWS EC2 instance, where I run a single-node Kubernetes cluster using k3s.
-                       You may ask why I picked Kubernetes instead of just running Docker container, why I picked AWS instead of DigitalOcean - 
+                       You may ask why I picked Kubernetes instead of just running Docker container, why I picked AWS instead of DigitalOcean, etc. - 
                        there are 2 main reasons:
                     </p>
                     <ul class="list-disc list-inside mt-0 mb-0">
@@ -193,10 +193,6 @@ templ ArticleZeroTrustHomelab() {
   storage_class = "Standard"
 }
 
-output "blog_bucket_endpoint" {
-  value = cloudflare_r2_bucket.blog_bucket.name
-}
-
 resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
   account_id  = var.cf_account_id
   bucket_name = cloudflare_r2_bucket.blog_bucket.name
@@ -207,7 +203,114 @@ resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
 }` }
                         }
                     </div>
+                    <p class="mt-2 mb-0">
+                        We’ve covered how to expose services to the internet. Now let’s tackle the second question: how do I access the cluster securely?
+                        Since my workloads run on AWS, I can use AWS Systems Session Manager (SSM) to connect to the EC2 instance without opening any inbound ports—a great feature that works out of the box on most Amazon-provided AMIs.
+                        But what if you’re running on another cloud provider, on-premises, or in a hybrid environment?
+                        For this problem I use Tailscale, a mesh VPN built on WireGuard. In practice, this means that every machine you add to your Tailscale network(your tailnet) can communicate securely with every other machine—regardless of NAT, firewalls, or physical location. Tailscale handles all the heavy lifting.
+                        This is especially handy for my setup: when I bootstrap the VM running my k3s cluster, I immediately add it to my tailnet. As a result, only devices in my Tailscale network can reach the k3s API server, allowing me to manage the cluster securely from my laptop or any other trusted machine.
+                        This approach eliminates the need for a traditional VPN server, HashiCorp Boundary, or any other complex solution. And because Tailscale uses a p2p architecture, traffic flows directly between machines. The only communication with Tailscale’s central service is for authentication, key exchange and certificates—not for the data itself.
+                        Well, this solves the problem with accessing the cluster securly from terminal, but what about accessing private graphical applications like pgAdmin, from where I want secure access to my PostgreSQL database?
+                        No problem, Tailscale has a solution for that too-
+                        <a href="https://artifacthub.io/packages/helm/tailscale/tailscale-operator" class="text-blue-600 hover:underline"> 
+                            taiscale-operator
+                        </a>. 
+                        With it I can run Tailscale directly on my Kubernetes cluster and expose private services as Tailscale "Magic DNS" hostnames.
+                        How this looks in my homelab? This is the configuration for the pgAdmin service(standard one, nothing special): 
+                    </p>
+					<div class="my-0">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeFull,
+						}) {
+							{ 
+`---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: pgadmin
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80` }
+                        }
+                    </div>
+                    <p class="my-0">
+                        To expose this service through Tailscale, I just have to add Ingress with the following configuration:
+                    </p>
+					<div class="my-0">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeFull,
+						}) {
+							{ 
+`---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgadmin-ingress
+  namespace: databases
+spec:
+  defaultBackend:
+    service:
+      name: pgadmin-svc
+      port:
+        number: 8080
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - pgadmin` }
+                        }
+                    </div>
+                    <p class="my-0">
+                       On this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
+                    </p>
 
+                    <p class="mt-2 mb-0">
+                        Probably the last thing worth mentioning is that that I manage my cloud resources and Kubernetes objects using Terraform using Helm provider.
+                        I chose this approach, because of two reasons:
+                    </p>
+                    <ul class="list-disc list-inside mt-0 mb-0">
+                        <li>
+                            It is simpler to manage everything in a single place using one tool, instead of uisng GitOps tools like ArgoCD or FluxCD. 
+                            For more comlex setups, GitOps tools are better fit, but for my homelab this is OK, who knows, maybe in the future I will switch to Flux.
+                        </li>
+                        <li>
+                            When I use Terraform to manage Kubernetes objects, I can dynamically pass auto-generated values from cloud resources to the cluster.
+                            This is a feature that is important for me, and I was not able to find solution for it using ArgoCD or FluxCD.
+                            That's why I work on 
+                            <a href="https://github.com/ip812/terraform-provider-gitsync" class="text-blue-600 hover:underline"> 
+                                terraform-provider-gitsync
+                            </a> 
+                            - a simple  Terraform provider that automatically syncs non-sensitive values such as generated URLs, ARNs, and IDs into a Git repository, storing them in a values.yaml file.
+                            If you find it interesting, you can star the repo, it will motivate me to continue working on it.
+                        </li>
+                    </ul>
+                    <p class="mt-2 mb-0">
+                        So this is how I built my fully functional homelab with zero open inbound ports, using a combination of AWS, Kubernetes, Cloudflare, and Tailscale.
+                        To summarize, I hope you found this article interesting and that it gave you some ideas for your own homelab.
+                        If you have any questions or suggestions, feel free to connect with me on the social media or to write a comment below.
+                    </p>
+                    <ul class="list-disc list-inside mt-0 mb-0">
+                        <li>
+                            You can find the source code for this project
+                            <a href="https://github.com/ip812/infra/tree/002fd55652cd9c85fa288119230138fa775742c0" class="text-blue-600 hover:underline"> 
+                                here
+                            </a>.
+                        </li>
+                        <li>
+                            <a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="text-blue-600 hover:underline"> 
+                                Here
+                            </a>
+                            I recorded a video how I deploy this blog application you are reading right now on my homelab so you can see the whole process in action.
+                        </li>
+                    </ul>
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
