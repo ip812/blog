@@ -27,32 +27,156 @@ templ ArticleZeroTrustHomelab() {
 					<header class="flex flex-col w-full justify-center items-center mb-2">
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabMetadata.Name }</h1>
 					</header>
-					<p>
-						Some of the Terraform code snippets in this article are simplified for clarity.
-					</p>
-					<div class="mt-6">
+                    <p class="mb-2">
+                        As a developer, I have always wanted to create a small homelab where I can play around with different technologies and ideas,
+                        but these questions always come up:
+                    </p>
+                    <ul class="list-disc list-inside mt-0 mb-0">
+                        <li>How should I host it in the cloud?</li>
+                        <li>How can I make it fault-tolerant?</li>
+                        <li>How can I access it securely?</li>
+                        <li>How can I back up all my information and restore it reliably?</li>
+                    </ul>
+                    <p class="mt-0">
+                        After some research and a lot of iterations, I would like to share with you my current
+                        setup, what trade-offs I made, and what I learned along the way.
+                    </p>
+                    <p class="mt-2 mb-0">
+                       Let's start from more generic technical choices and then move to more specific ones. My homelab is hosted on
+                       a single AWS EC2 instance, where I run a single-node Kubernetes cluster using k3s.
+                       You may ask why I picked Kubernetes instead of just running Docker container, why I picked AWS instead of DigitalOcean - 
+                       there are 2 main reasons:
+                    </p>
+                    <ul class="list-disc list-inside mt-0 mb-0">
+                        <li>
+                            The main goal of this project is to become a better professional. 
+                            That’s why I chose technologies that I use at work and that are widely adopted in the industry.
+                            At the end of the day, if a person has strong fundamentals, the exact tech stack they use doesn’t really matter.
+                        </li>
+                        <li>
+                            Once you overcome the learning curve, the benefits of using the Kubernetes ecosystem far outweigh the costs. 
+                            For example, I run my database (only PostgreSQL) directly on the cluster using the 
+                            <a href="https://artifacthub.io/packages/olm/community-operators/cloudnative-pg" class="text-blue-600 hover:underline"> 
+                                CloudNativePG operator
+                            </a>, 
+                            which provides built-in backups & restore mechanisms to a private S3 bucket. 
+                            Additionally, I use the 
+                            <a href="https://artifacthub.io/packages/helm/grafana/k8s-monitoring" class="text-blue-600 hover:underline"> 
+                                k8s-monitoring Helm chart
+                            </a> 
+                            to monitor my cluster with Grafana Cloud, 
+                            which offers a generous free tier and takes care of storing logs, metrics, and traces 
+                            without extra management overhead.
+                        </li>
+                    </ul>
+                    <p class="mt-2 mb-0">
+                        <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-aws-architecture.drawio.png" alt="AWS Architecture"/>
+                            Let’s explore the architecture, moving from the overall setup to the individual components. 
+                            The diagram above shows the high-level AWS view: a single VPC with two public subnets across different availability zones. 
+                            Inside it, there’s just one auto-scaling group running a single EC2 instance—that’s all.
+                            Experienced readers will probably notice a few elements that are missing compared to a typical production environment:
+                    </p>
+                    <ul class="list-disc list-inside my-0">
+                        <li>
+                            Where is the Load Balancer that should route traffic to the EC2 instance?
+                        </li>
+                        <li>
+                            In the above paragraph, you mentioned that the databases are running on the cluster itself,
+                            but the subnets are public, so how is it secure? 
+                        </li>
+                        <li>
+                            Where are the private subnets and NAT gateway? 
+                        </li>
+                    </ul>
+                    <p class="my-0">
+                        All these questions are valid, and I will address them one by one. 
+                        First of all, I want to show you the security group configuration:
+                    </p>
+					<div class="my-0">
 						@code.Code(code.Props{
 							Language:       "go",
 							ShowCopyButton: true,
-							Size:           code.SizeSm,
+							Size:           code.SizeFull,
 						}) {
 							{ 
-`resource "cloudflare_r2_bucket" "pg_backups_bucket" {
-    account_id = var.cf_account_id
-    name = "${var.org}-${var.env}-pg-backups-bucket"
-    location = "EEUR"
-    storage_class = "Standard"
+`resource "aws_security_group" "asg_sg" {
+  vpc_id  = aws_vpc.vpc.id
+  ingress = []
+  egress = [
+    {
+      cidr_blocks      = ["0.0.0.0/0"]
+      description      = "Allow all outbound traffic"
+      from_port        = 0
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      protocol         = -1
+      security_groups  = []
+      self             = false
+      to_port          = 0
+    },
+  ]
+  tags = local.default_tags
 }` }
 						}
 					</div>
-					<p>
-						More explanatory text after the code snippet. Keep paragraphs short for easier reading.
-					</p>
-					<img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-overview.drawio.png" alt="Zero Trust Homelab overview"/>
-					<p>
-						Some of the Terraform code snippets in this article are simplified for clarity.
-						<a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="underline text-blue-500">Here</a> you can find the video where I demonstrate how I add this blog application on which you are reading at the moment to my homelab.
-					</p>
+                    <p class="my-0">
+                        As you can see, the security group allows all outbound traffic but denies all inbound traffic. 
+                        This basically means that no one from the internet can access my EC2 instance directly, so the security concern is addressed.
+                        Also this removes the need of NAT gateway, which is a paid resource that I want to avoid for cost-saving reasons. 
+                        But now the big questions arise: how do I expose my services to the internet and how do I access the cluster securely?
+                        Well, the rest of the article will be dedicated to answering these two questions. 
+                        At the end the name of the article is zero-trust homelab, right?
+                    </p>
+
+                    <p class="mt-2 mb-0">
+                        Let’s start with the first question: how do I expose my services to the internet?
+                        For everything that needs to be public, I rely on Cloudflare.
+                        You probably know Cloudflare for its fast CDN and excellent DDoS protection (with a very generous free tier), 
+                        but it also offers other free services that fit perfectly in a homelab. 
+                        The key one I use is Cloudflare Tunnel, 
+                        which lets you securely expose applications running on a private network without opening any inbound ports.
+                        Here’s how it works: you run a lightweight daemon—either directly on your server 
+                        or as a sidecar container in your cluster—that creates an outbound connection to Cloudflare’s network 
+                        (it uses WebSockets under the hood).
+                        I also manage all my DNS records through Cloudflare and use its proxy feature to route traffic to my services. 
+                        This setup means Cloudflare handles TLS termination for me as well.
+                        Also something that is worth mentioning is that you don't need a reverse proxy like Nginx or Traefik in front of your services,
+                        because Cloudflare daemon takes care of routing the traffic to the right service based on the hostname.
+                        For example this is my configuration for the Cloudflare Tunnel daemon(clodflared):
+                    </p>
+					<div class="my-0">
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeFull,
+						}) {
+							{ 
+`resource "cloudflare_zero_trust_tunnel_cloudflared_config" "cf_tunnel_cfg" {
+  account_id = data.terraform_remote_state.prod.outputs.cf_account_id
+  tunnel_id  = data.terraform_remote_state.prod.outputs.cf_tunnel_id
+  config = {
+    ingress = [
+      {
+        hostname = data.terraform_remote_state.prod.outputs.go_template_hostname
+        service  = "http://go-template-svc.${kubernetes_namespace.template.metadata[0].name}.svc.cluster.local:8080"
+      },
+      {
+        hostname = data.terraform_remote_state.prod.outputs.blog_hostname
+        service  = "http://blog-svc.${kubernetes_namespace.blog.metadata[0].name}.svc.cluster.local:8080"
+      },
+      {
+        service = "http_status:404"
+      }
+    ]
+  }
+}` }
+                        }
+                    </div>
+                    <p class="my-0">
+                        I map each target hostname directly to its corresponding Kubernetes service.
+                        The Cloudflare Tunnel daemon runs as a regular pod, not as an Ingress or Gateway.
+                        This approach is flexible enough to work with Docker Compose or even on a bare-metal server.
+                    </p>
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
