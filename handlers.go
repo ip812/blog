@@ -160,8 +160,8 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 	if err := hnd.slacknotifier.SendMsg(
 		hnd.config.Slack.GeneralChannelID,
 		fmt.Sprintf(
-			"New comment for article *%d* was added:\n>%s\n>%s",
-			articleID,
+			"New comment for article *%s* was added:\n>%s\n>%s",
+			articles.GetByID(articleID).Name,
 			"https://blog.ip812.com/p/public/articles/"+strconv.FormatUint(articleID, 10),
 			props.Content,
 		),
