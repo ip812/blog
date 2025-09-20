@@ -36,6 +36,11 @@ type Config struct {
 		Username string
 		Password string
 	}
+
+	Slack struct {
+		BlogBotToken     string
+		GeneralChannelID string
+	}
 }
 
 func New() *Config {
@@ -58,6 +63,8 @@ func New() *Config {
 	cfg.Database.SSLMode = os.Getenv("DB_SSL_MODE")
 	cfg.Database.Username = os.Getenv("DB_USERNAME")
 	cfg.Database.Password = os.Getenv("DB_PASSWORD")
+	cfg.Slack.BlogBotToken = os.Getenv("SLACK_BLOG_BOT_TOKEN")
+	cfg.Slack.GeneralChannelID = os.Getenv("SLACK_GENERAL_CHANNEL_ID")
 
 	return cfg
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/logger"
+	"github.com/ip812/blog/notifier"
 	"github.com/ip812/blog/utils"
 )
 
@@ -46,9 +47,11 @@ func main() {
 	snowflake.SetStartTime(startTime)
 	snowflake.SetMachineID(1)
 
+	slacknotifier := notifier.NewSlack(cfg.Slack.BlogBotToken, log)
+
 	swappableDB := NewSwappableDB()
 
-	server := startHTTPServer(cfg, log, swappableDB)
+	server := startHTTPServer(cfg, log, swappableDB, slacknotifier)
 
 	db, err := connectToDatabaseWithRetry(ctx, cfg, log)
 	if err != nil {
@@ -125,7 +128,7 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 	return conn.db, err
 }
 
-func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.Server {
+func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper, slacknotifier *notifier.Slack) *http.Server {
 	formDecoder := form.NewDecoder()
 	formValidator := validator.New(validator.WithRequiredStructEnabled())
 
@@ -133,6 +136,7 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper) *http.
 		config:        cfg,
 		formDecoder:   formDecoder,
 		formValidator: formValidator,
+		slacknotifier: slacknotifier,
 		db:            db,
 		log:           log,
 	}
