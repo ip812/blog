@@ -27,6 +27,13 @@ templ ArticleZeroTrustHomelab() {
 					<header class="flex flex-col w-full justify-center items-center mb-4">
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabMetadata.Name }</h1>
 					</header>
+
+                    <h2 id="introduction" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Introduction
+                        <a href="#introduction" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Introduction">
+                            #
+                        </a>
+                    </h2>
                     <p class="mb-4">
                         As a developer, I have always wanted to create a small homelab where I can play around with different technologies and ideas,
                         but these questions always come up:
@@ -69,9 +76,16 @@ templ ArticleZeroTrustHomelab() {
                             without extra management overhead.
                         </li>
                     </ul>
+
+                    <h2 id="architecture-overview" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Architecture Overview
+                        <a href="#architecture-overview" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Architecture Overview">
+                            #
+                        </a>
+                    </h2>
                     <p class="mt-4 mb-0">
                         <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-aws-architecture.drawio.png" alt="AWS Architecture"/>
-                            Let’s explore the architecture, moving from the overall setup to the individual components. 
+                            Let's explore the architecture, moving from the overall setup to the individual components. 
                             The diagram above shows the high-level AWS view: a single VPC with two public subnets across different availability zones. 
                             Inside it, there’s just one auto-scaling group running a single EC2 instance—that’s all.
                             Experienced readers will probably notice a few elements that are missing compared to a typical production environment:
@@ -88,6 +102,13 @@ templ ArticleZeroTrustHomelab() {
                             Where are the private subnets and NAT gateway? 
                         </li>
                     </ul>
+
+                    <h3 id="security-group-configuration" class="text-xl font-bold mt-6 mb-3 group flex items-center">
+                        Security Group Configuration
+                        <a href="#security-group-configuration" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-base" aria-label="Link to Security Group Configuration">
+                            #
+                        </a>
+                    </h3>
                     <p class="my-0">
                         All these questions are valid, and I will address them one by one. 
                         First of all, I want to show you the security group configuration:
@@ -127,8 +148,14 @@ templ ArticleZeroTrustHomelab() {
                         Well, the rest of the article will be dedicated to answering these two questions. 
                     </p>
 
+                    <h2 id="exposing-services-to-internet" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Exposing Services to the Internet
+                        <a href="#exposing-services-to-internet" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Exposing Services to the Internet">
+                            #
+                        </a>
+                    </h2>
                     <p class="mt-4 mb-0">
-                        Let’s start with the first question: how do I expose my services to the internet?
+                        Let's start with the first question: how do I expose my services to the internet?
                         For everything that needs to be public, I rely on Cloudflare.
                         You probably know Cloudflare for its fast CDN and excellent DDoS protection (with a very generous free tier), 
                         but it also offers other free services that fit perfectly in a homelab. 
@@ -141,7 +168,7 @@ templ ArticleZeroTrustHomelab() {
                         This setup means Cloudflare handles TLS termination for me as well.
                         Also something that is worth mentioning is that you don't need a reverse proxy like Nginx or Traefik in front of your services,
                         because Cloudflare daemon takes care of routing the traffic to the right service based on the hostname.
-                        For example this is my configuration for the Cloudflare Tunnel daemon(clodflared):
+                        For example this is my configuration for the Cloudflare Tunnel daemon(cloudflared):
                     </p>
 					<div class="my-0">
 						@code.Code(code.Props{
@@ -176,7 +203,16 @@ templ ArticleZeroTrustHomelab() {
                         The Cloudflare Tunnel daemon runs as a regular pod rather than as an Ingress or Gateway, making the setup flexible enough to work with Docker Compose or even on a bare-metal server.
                         This approach does have limitations. According to Cloudflare’s documentation, a single tunnel can handle roughly 4,000 concurrent users, and tunnels aren’t recommended for serving large media files such as images or videos—the sweet spot is small to medium REST APIs.
                         To address that, I serve all images and other static assets from Cloudflare R2 buckets. R2 has no egress fees, so I can deliver as much content as I need without worrying about bandwidth costs. You can attach a custom domain to an R2 bucket, which makes it publicly accessible and automatically provides CDN caching, DDoS protection, and TLS termination at no extra charge.
-                        Combined with R2’s lower storage price compared to AWS S3, this ends up being a very cost-effective solution.
+                        Combined with R2's lower storage price compared to AWS S3, this ends up being a very cost-effective solution.
+                    </p>
+
+                    <h3 id="cloudflare-r2-static-assets" class="text-xl font-bold mt-6 mb-3 group flex items-center">
+                        Cloudflare R2 for Static Assets
+                        <a href="#cloudflare-r2-static-assets" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-base" aria-label="Link to Cloudflare R2 for Static Assets">
+                            #
+                        </a>
+                    </h3>
+                    <p class="my-0">
                         This is how I configure the R2 bucket for serving static assets:
                     </p>
 					<div class="my-0">
@@ -203,17 +239,24 @@ resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
 }` }
                         }
                     </div>
+
+                    <h2 id="accessing-cluster-securely" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Accessing the Cluster Securely
+                        <a href="#accessing-cluster-securely" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Accessing the Cluster Securely">
+                            #
+                        </a>
+                    </h2>
                     <p class="mt-4 mb-0">
-                        We’ve covered how to expose services to the internet. Now let’s tackle the second question: how do I access the cluster securely?
+                        We've covered how to expose services to the internet. Now let's tackle the second question: how do I access the cluster securely?
                         Since my workloads run on AWS, I can use AWS Systems Session Manager (SSM) to connect to the EC2 instance without opening any inbound ports—a great feature that works out of the box on most Amazon-provided AMIs.
                         But what if you’re running on another cloud provider, on-premises, or in a hybrid environment?
                         For this problem I use Tailscale, a mesh VPN built on WireGuard. In practice, this means that every machine you add to your Tailscale network(your tailnet) can communicate securely with every other machine—regardless of NAT, firewalls, or physical location. Tailscale handles all the heavy lifting.
                         This is especially handy for my setup: when I bootstrap the VM running my k3s cluster, I immediately add it to my tailnet. As a result, only devices in my Tailscale network can reach the k3s API server, allowing me to manage the cluster securely from my laptop or any other trusted machine.
                         This approach eliminates the need for a traditional VPN server, HashiCorp Boundary, or any other complex solution. And because Tailscale uses a p2p architecture, traffic flows directly between machines. The only communication with Tailscale’s central service is for authentication, key exchange and certificates—not for the data itself.
-                        Well, this solves the problem with accessing the cluster securly from terminal, but what about accessing private graphical applications like pgAdmin, from where I want secure access to my PostgreSQL database?
+                        Well, this solves the problem with accessing the cluster securely from terminal, but what about accessing private graphical applications like pgAdmin, from where I want secure access to my PostgreSQL database?
                         No problem, Tailscale has a solution for that too-
                         <a href="https://artifacthub.io/packages/helm/tailscale/tailscale-operator" class="text-blue-600 hover:underline"> 
-                            taiscale-operator
+                            tailscale-operator
                         </a>. 
                         With it I can run Tailscale directly on my Kubernetes cluster and expose private services as Tailscale "Magic DNS" hostnames.
                         How this looks in my homelab? This is the configuration for the pgAdmin service(standard one, nothing special): 
@@ -272,14 +315,20 @@ spec:
                        On this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
                     </p>
 
+                    <h2 id="infrastructure-as-code" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Infrastructure as Code with Terraform
+                        <a href="#infrastructure-as-code" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Infrastructure as Code with Terraform">
+                            #
+                        </a>
+                    </h2>
                     <p class="mt-4 mb-0">
                         Probably the last thing worth mentioning is that I manage my cloud resources and Kubernetes objects using Terraform leveraging Helm provider.
                         I chose this approach, due to two reasons:
                     </p>
                     <ul class="list-disc list-inside mt-0 mb-0">
                         <li>
-                            It is simpler to manage everything in a single place using one tool, instead of uisng GitOps tools like ArgoCD or FluxCD. 
-                            For more comlex setups, GitOps tools are better fit, but for my homelab this is OK.
+                            It is simpler to manage everything in a single place using one tool, instead of using GitOps tools like ArgoCD or FluxCD. 
+                            For more complex setups, GitOps tools are better fit, but for my homelab this is OK.
                             Who knows, maybe in the future I will switch to Flux.
                         </li>
                         <li>
@@ -293,6 +342,13 @@ spec:
                             If you find it interesting, you can star the repo, it will motivate me to continue working on it.
                         </li>
                     </ul>
+
+                    <h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
+                        Conclusion
+                        <a href="#conclusion" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 text-lg" aria-label="Link to Conclusion">
+                            #
+                        </a>
+                    </h2>
                     <p class="mt-4 mb-0">
                         So this is how I built my fully functional homelab with zero open inbound ports, using a combination of AWS, Kubernetes, Cloudflare, and Tailscale.
                         To summarize, I hope you found this article interesting and that it gave you some ideas for your own homelab.
