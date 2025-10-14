@@ -1,7 +1,7 @@
 package views
 
 import (
-    "fmt"
+	"fmt"
 	"github.com/ip812/blog/articles"
 	"github.com/ip812/blog/templates"
 	"github.com/ip812/blog/templates/components"
@@ -51,7 +51,7 @@ templ ArticleZeroTrustHomelab() {
                     <p class="mt-4 mb-0">
                        Let's start from more generic technical choices and then move to more specific ones. My homelab is hosted on
                        a single AWS EC2 instance, where I run a single-node Kubernetes cluster using k3s.
-                       You may ask why I picked Kubernetes instead of just running Docker container, why I picked AWS instead of DigitalOcean, etc. - 
+                       You may ask why I picked Kubernetes instead of just running Docker containers, why I picked AWS instead of DigitalOcean, etc. - 
                        there are 2 main reasons:
                     </p>
                     <ul class="list-disc list-inside mt-0 mb-0">
@@ -63,12 +63,12 @@ templ ArticleZeroTrustHomelab() {
                         <li>
                             Once you overcome the learning curve, the benefits of using the Kubernetes ecosystem far outweigh the costs. 
                             For example, I run my database (only PostgreSQL) directly on the cluster using the 
-                            <a href="https://artifacthub.io/packages/olm/community-operators/cloudnative-pg" class="text-blue-600 hover:underline"> 
+                            <a href="https://artifacthub.io/packages/olm/community-operators/cloudnative-pg" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                                 CloudNativePG operator
                             </a>, 
                             which provides built-in backups & restore mechanisms to a private S3 bucket. 
                             Additionally, I use the 
-                            <a href="https://artifacthub.io/packages/helm/grafana/k8s-monitoring" class="text-blue-600 hover:underline"> 
+                            <a href="https://artifacthub.io/packages/helm/grafana/k8s-monitoring" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                                 k8s-monitoring Helm chart
                             </a> 
                             to monitor my cluster with Grafana Cloud, 
@@ -84,7 +84,7 @@ templ ArticleZeroTrustHomelab() {
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
-                        <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-aws-architecture.drawio.png" alt="AWS Architecture"/>
+                        <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-aws-architecture.drawio.png" alt="AWS Architecture diagram showing VPC with two public subnets across availability zones and a single EC2 instance"/>
                             Let's explore the architecture, moving from the overall setup to the individual components. 
                             The diagram above shows the high-level AWS view: a single VPC with two public subnets across different availability zones. 
                             Inside it, there’s just one auto-scaling group running a single EC2 instance—that’s all.
@@ -143,7 +143,7 @@ templ ArticleZeroTrustHomelab() {
                     <p class="my-0">
                         As you can see, the security group allows all outbound traffic but denies all inbound traffic. 
                         This basically means that no one from the internet can access my EC2 instance directly, so the security concern is addressed.
-                        Also this removes the need of NAT gateway, which is a paid resource that I want to avoid for cost-saving reasons. 
+                        This also removes the need of NAT gateway, which is a paid resource that I want to avoid for cost-saving reasons. 
                         But now the big questions arise: how do I expose my services to the internet and how do I access the cluster securely?
                         Well, the rest of the article will be dedicated to answering these two questions. 
                     </p>
@@ -168,11 +168,11 @@ templ ArticleZeroTrustHomelab() {
                         This setup means Cloudflare handles TLS termination for me as well.
                         Also something that is worth mentioning is that you don't need a reverse proxy like Nginx or Traefik in front of your services,
                         because Cloudflare daemon takes care of routing the traffic to the right service based on the hostname.
-                        For example this is my configuration for the Cloudflare Tunnel daemon(cloudflared):
+                        For example this is my configuration for the Cloudflare Tunnel daemon (cloudflared):
                     </p>
 					<div class="my-0">
 						@code.Code(code.Props{
-							Language:       "go",
+							Language:       "hcl",
 							ShowCopyButton: true,
 							Size:           code.SizeFull,
 						}) {
@@ -217,7 +217,7 @@ templ ArticleZeroTrustHomelab() {
                     </p>
 					<div class="my-0">
 						@code.Code(code.Props{
-							Language:       "go",
+							Language:       "hcl",
 							ShowCopyButton: true,
 							Size:           code.SizeFull,
 						}) {
@@ -249,17 +249,17 @@ resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
                     <p class="mt-4 mb-0">
                         We've covered how to expose services to the internet. Now let's tackle the second question: how do I access the cluster securely?
                         Since my workloads run on AWS, I can use AWS Systems Session Manager (SSM) to connect to the EC2 instance without opening any inbound ports—a great feature that works out of the box on most Amazon-provided AMIs.
-                        But what if you’re running on another cloud provider, on-premises, or in a hybrid environment?
-                        For this problem I use Tailscale, a mesh VPN built on WireGuard. In practice, this means that every machine you add to your Tailscale network(your tailnet) can communicate securely with every other machine—regardless of NAT, firewalls, or physical location. Tailscale handles all the heavy lifting.
+                        But what if you're running on another cloud provider, on-premises, or in a hybrid environment?
+                        For this problem I use Tailscale, a mesh VPN built on WireGuard. In practice, this means that every machine you add to your Tailscale network (your tailnet) can communicate securely with every other machine—regardless of NAT, firewalls, or physical location. Tailscale handles all the heavy lifting.
                         This is especially handy for my setup: when I bootstrap the VM running my k3s cluster, I immediately add it to my tailnet. As a result, only devices in my Tailscale network can reach the k3s API server, allowing me to manage the cluster securely from my laptop or any other trusted machine.
                         This approach eliminates the need for a traditional VPN server, HashiCorp Boundary, or any other complex solution. And because Tailscale uses a p2p architecture, traffic flows directly between machines. The only communication with Tailscale’s central service is for authentication, key exchange and certificates—not for the data itself.
                         Well, this solves the problem with accessing the cluster securely from terminal, but what about accessing private graphical applications like pgAdmin, from where I want secure access to my PostgreSQL database?
                         No problem, Tailscale has a solution for that too-
-                        <a href="https://artifacthub.io/packages/helm/tailscale/tailscale-operator" class="text-blue-600 hover:underline"> 
+                        <a href="https://artifacthub.io/packages/helm/tailscale/tailscale-operator" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                             tailscale-operator
                         </a>. 
                         With it I can run Tailscale directly on my Kubernetes cluster and expose private services as Tailscale "Magic DNS" hostnames.
-                        How this looks in my homelab? This is the configuration for the pgAdmin service(standard one, nothing special): 
+                        How this looks in my homelab? This is the configuration for the pgAdmin service (standard one, nothing special): 
                     </p>
 					<div class="my-0">
 						@code.Code(code.Props{
@@ -312,7 +312,7 @@ spec:
                         }
                     </div>
                     <p class="my-0">
-                       On this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
+                       In this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
                     </p>
 
                     <h2 id="infrastructure-as-code" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
@@ -333,12 +333,12 @@ spec:
                         </li>
                         <li>
                             When I use Terraform to manage Kubernetes objects, I can dynamically pass auto-generated values from cloud resources to the cluster.
-                            This is a feature that is important for me, and I was not able to find solution for it using ArgoCD or FluxCD.
+                            This is a feature that is important for me, and I was not able to find a solution for it using ArgoCD or FluxCD.
                             That's why I work on 
-                            <a href="https://github.com/ip812/terraform-provider-gitsync" class="text-blue-600 hover:underline"> 
+                            <a href="https://github.com/ip812/terraform-provider-gitsync" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                                 terraform-provider-gitsync
                             </a> 
-                            - a simple  Terraform provider that automatically syncs non-sensitive values such as generated URLs, ARNs, and IDs into a Git repository, storing them in a values.yaml file.
+                            - a simple Terraform provider that automatically syncs non-sensitive values such as generated URLs, ARNs, and IDs into a Git repository, storing them in a values.yaml file.
                             If you find it interesting, you can star the repo, it will motivate me to continue working on it.
                         </li>
                     </ul>
@@ -357,15 +357,15 @@ spec:
                     <ul class="list-disc list-inside mt-0 mb-0">
                         <li>
                             You can find the source code for this project
-                            <a href="https://github.com/ip812/infra/tree/002fd55652cd9c85fa288119230138fa775742c0" class="text-blue-600 hover:underline"> 
+                            <a href="https://github.com/ip812/infra/tree/002fd55652cd9c85fa288119230138fa775742c0" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                                 here
                             </a>.
                         </li>
                         <li>
-                            <a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="text-blue-600 hover:underline"> 
+                            <a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
                                 Here
                             </a>
-                            I recorded a video how I deploy this blog application you are reading right now on my homelab so you can see the whole process in action.
+                            I recorded a video showing how I deploy this blog application you are reading right now on my homelab so you can see the whole process in action.
                         </li>
                     </ul>
 
