@@ -28,10 +28,9 @@ templ ArticleZeroTrustHomelab() {
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabMetadata.Name }</h1>
 					</header>
 
-                    <h2 id="introduction" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Introduction
-                        <a href="#introduction" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Introduction">
-                            #
+                    <h2 id="introduction" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#introduction" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+                            Introduction
                         </a>
                     </h2>
                     <p class="mb-4">
@@ -77,10 +76,9 @@ templ ArticleZeroTrustHomelab() {
                         </li>
                     </ul>
 
-                    <h2 id="architecture-overview" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Architecture Overview
-                        <a href="#architecture-overview" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Architecture Overview">
-                            #
+                    <h2 id="architecture-overview" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#architecture-overview" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Architecture Overview">
+                            Architecture Overview
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
@@ -103,10 +101,9 @@ templ ArticleZeroTrustHomelab() {
                         </li>
                     </ul>
 
-                    <h3 id="security-group-configuration" class="text-xl font-bold mt-6 mb-3 group flex items-center">
-                        Security Group Configuration
-                        <a href="#security-group-configuration" class="ml-2 text-blue-600 hover:text-blue-800 text-base cursor-pointer" aria-label="Link to Security Group Configuration">
-                            #
+                    <h3 id="security-group-configuration" class="text-xl font-bold mt-6 mb-3 group">
+                        <a href="#security-group-configuration" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Security Group Configuration">
+                            Security Group Configuration
                         </a>
                     </h3>
                     <p class="my-0">
@@ -148,10 +145,9 @@ templ ArticleZeroTrustHomelab() {
                         Well, the rest of the article will be dedicated to answering these two questions. 
                     </p>
 
-                    <h2 id="exposing-services-to-internet" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Exposing Services to the Internet
-                        <a href="#exposing-services-to-internet" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Exposing Services to the Internet">
-                            #
+                    <h2 id="exposing-services-to-internet" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#exposing-services-to-internet" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Exposing Services to the Internet">
+                            Exposing Services to the Internet
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
@@ -206,10 +202,9 @@ templ ArticleZeroTrustHomelab() {
                         Combined with R2's lower storage price compared to AWS S3, this ends up being a very cost-effective solution.
                     </p>
 
-                    <h3 id="cloudflare-r2-static-assets" class="text-xl font-bold mt-6 mb-3 group flex items-center">
-                        Cloudflare R2 for Static Assets
-                        <a href="#cloudflare-r2-static-assets" class="ml-2 text-blue-600 hover:text-blue-800 text-base cursor-pointer" aria-label="Link to Cloudflare R2 for Static Assets">
-                            #
+                    <h3 id="cloudflare-r2-static-assets" class="text-xl font-bold mt-6 mb-3 group">
+                        <a href="#cloudflare-r2-static-assets" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Cloudflare R2 for Static Assets">
+                            Cloudflare R2 for Static Assets
                         </a>
                     </h3>
                     <p class="my-0">
@@ -240,10 +235,9 @@ resource "cloudflare_r2_custom_domain" "blog_bucket_custom_domain" {
                         }
                     </div>
 
-                    <h2 id="accessing-cluster-securely" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Accessing the Cluster Securely
-                        <a href="#accessing-cluster-securely" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Accessing the Cluster Securely">
-                            #
+                    <h2 id="accessing-cluster-securely" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#accessing-cluster-securely" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Accessing the Cluster Securely">
+                            Accessing the Cluster Securely
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
@@ -315,10 +309,9 @@ spec:
                        In this way I can access pgAdmin securely from my laptop at the URL https://pgadmin.magic-dns-domain, without exposing it to the internet.
                     </p>
 
-                    <h2 id="infrastructure-as-code" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Infrastructure as Code with Terraform
-                        <a href="#infrastructure-as-code" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Infrastructure as Code with Terraform">
-                            #
+                    <h2 id="infrastructure-as-code" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#infrastructure-as-code" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Infrastructure as Code with Terraform">
+                            Infrastructure as Code with Terraform
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
@@ -343,10 +336,9 @@ spec:
                         </li>
                     </ul>
 
-                    <h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group flex items-center">
-                        Conclusion
-                        <a href="#conclusion" class="ml-2 text-blue-600 hover:text-blue-800 text-lg cursor-pointer" aria-label="Link to Conclusion">
-                            #
+                    <h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group">
+                        <a href="#conclusion" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
+                            Conclusion
                         </a>
                     </h2>
                     <p class="mt-4 mb-0">
