@@ -186,7 +186,7 @@ EOT
 apiVersion: secrets.doppler.com/v1alpha1
 kind: DopplerSecret
 metadata:
-  name: ghcr-auth-blog
+  name: ghcr-auth-go-template
   namespace: doppler-operator-system
 spec:
   tokenSecret: 
@@ -195,7 +195,7 @@ spec:
   config: prd
   managedSecret:
     name: ghcr-auth
-    namespace: blog
+    namespace: go-template
     type: kubernetes.io/dockerconfigjson
   processors:
     GHCR_DOCKERCONFIGJSON:
