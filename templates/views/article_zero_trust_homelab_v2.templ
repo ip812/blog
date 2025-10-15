@@ -20,7 +20,7 @@ templ ArticleZeroTrustHomelabV2() {
 						@button.Button(button.Props{
 							Href: "/p/public/articles",
 						}) {
-                            Go Back to Articles
+						    Go Back to Articles
 						}
 					</div>
 
@@ -28,75 +28,80 @@ templ ArticleZeroTrustHomelabV2() {
 						<h1 class="text-3xl font-semibold leading-tight">{ zeroTrustHomelabV2Metadata.Name }</h1>
 					</header>
 
-                    <h2 id="motivation" class="text-2xl font-bold mt-8 mb-4 group">
-                        <a href="#motivation" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Motivation">
-                            Motivation
-                        </a>
-                    </h2>
+				    <h2 id="motivation" class="text-2xl font-bold mt-8 mb-4 group">
+				        <a href="#motivation" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Motivation">
+				            Motivation
+				        </a>
+				    </h2>
 
-                    <p class="mb-4">
-                        In my previous 
-                            <a href="/p/public/articles/1417231583613554688" class="text-blue-600 hover:text-blue-800 underline">blog post</a> 
-                        I discussed my homelab setup and how I achieved relative HA and more importantly zero opened ports to the internet, while still being able to access my services from anywhere securely
-                        and expose my app to the internet. Let me briefly summarize the setup:
-                    </p>
-                    <ul class="list-disc list-inside mt-0 mb-0">
-                        <li>Single EC2 instance in an auto-scaling group, so if the instance crashes, it will be recreated in another AZ.</li>
-                        <li>Security group that blocks all ingress and enables all egress.</li>
-                        <li>Small k3s cluster running on the instance to run my applications.</li>
-                        <li>The instance was added to my Tailscale network, so I can easily and securely access the instance without exposing any ports.</li>
-                        <li>Run cloudflared on the k3s cluster to expose my web apps via Cloudflare Tunnel to the open internet again by exposing 0 ports.</li>
-                        <li>A CloudnativePG was set up to be able to run my own Postgres databases on the cluster with daily backups and in case of recreation the VM to restore from the backups (RDS is kinda expensive).</li>
-                        <li>Everything is monitored by using Grafana Cloud integration with Kubernetes, where I store the metrics inside managed Prometheus, logs in Loki and so on.</li>
-                    </ul>
-                    <p class="mt-0 mb-0">
-                       This setup was and still is great, but I faced some pain points that really made me think of some changes:
-                    </p>
-                    <ul class="list-disc list-inside mt-0 mb-0">
-                        <li>
-                            I used to manage both my resources and Kubernetes setup via Terraform. 
-                            While Terraform is great for managing AWS resources, Grafana Cloud stacks and so on, it is kinda painful to manage Kubernetes manifests, Helm charts, etc. 
-                            How I managed it was that I had 2 separate Terraform workspaces, one for the AWS resources, Cloudflare DNS records, GitHub secrets and so on, while in the second workspace I picked as outputs the needed results from the first workspace and created the needed Helm charts and so on.
-                            This caused one big issue - because my k3s cluster had no exposed ports and the only way to access it was to be part of its Tailscale network, I had to do 2 things: 
-                            First, I had to disable the option of Terraform Cloud to run the plans and applies on their workers and to run the plans and applies locally, because there is no way to add their workers to my Tailscale network.
-                            So the end setup was to temporarily add GitHub Action runner temporarily to my Tailscale network (there is a nice GitHub Action for that) and then run the Terraform plan and apply from that runner.
-                        </li>
-                        <li>
-                            Even though it was possible to manage the k3s cluster via Terraform, it was not ideal.
-                            Every time the VM was recreated I had to manually run the Terraform apply on the k3s workspace, because the state was lost.
-                            The other option was (that I did in the majority of time) to make a change in the first workspace and then it would trigger a change in the second workspace.
-                            As you can see this setup was not very robust at least. Also there are some known issues of managing Helm charts via Terraform, especially in case of updating existing charts or triggering a redeploy.
-                        </li>
-                    </ul>
-                    <p class="mt-0 mb-0">
-                       All these points led me to think how to adjust the setup and make it more robust and easier to manage. 
-                    </p>
+				    <p class="my-0">
+				      In an earlier <a href="/p/public/articles/1417231583613554688" class="text-blue-600 hover:text-blue-800 underline">post</a> I described my homelab: a single EC2 instance running a small k3s cluster, with zero open ports to the public internet while still allowing secure remote access and selective app exposure. Here’s a quick recap:
+				    </p>
 
-                    <h2 id="new-setup" class="text-2xl font-bold mt-8 mb-4 group">
-                        <a href="#new-setup" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to New Setup">
-                            New Setup
-                        </a>
-                    </h2>
-                    <p class="mt-0 mb-0">
-                        <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-v2-fluxcd-architecture.png" alt="FluxCD setup"/>
-                       At the beginning I had in mind to use FluxCD to manage the cluster, which has some obvious advantages.
-                       Very popular GitOps tool (I thought to use ArgoCD at the beginning, but it requires too much resources for my small instance), that can easily manage the cluster via git repos.
-                       It is designed to manage Kubernetes resources and Helm charts, so it is ideal for my use case. 
-                       Even if I keep the values.yaml files in git, I can easily reuse some common Helm charts and make my setup very clean.
-                       But there were 2 problems - in these values files how to easily pass information from Terraform and how to pass from Terraform all sensitive values like database passwords, Cloudflare tunnel credentials and so on from Terraform to the cluster.
-                       I put all my secrets in Terraform Cloud, from where I can easily pass them as sensitive variables to different Terraform resources.
-                       Also something that I really like is after I create some resource and I can access some auto-generated values from it like DNS names, ARNs and so on.
-                       I looked for an efficient way how to pass such non-sensitive values to the values.yaml files, from where FluxCD will pick them up, but I did not find any good solution.
-                       That's why I wrote some small Terraform provider that will keep track of values files in a git repo and will update them with the values from Terraform.
-                    </p>
+				    <ul class="list-disc list-inside mt-0 mb-0">
+				      <li>A single EC2 instance inside an Auto Scaling Group so the instance can be recreated in another AZ if it fails.</li>
+				      <li>A security group that blocks all ingress while allowing outbound traffic.</li>
+				      <li>A lightweight k3s cluster hosting my applications.</li>
+				      <li>The instance is part of my Tailscale network, so I can securely access it without exposing ports.</li>
+				      <li>cloudflared runs on the cluster to expose web apps through Cloudflare Tunnel — again, with zero open ports.</li>
+				      <li>CloudnativePG provides Postgres on the cluster, with daily backups so I can restore after a VM recreation (RDS is a bit expensive for a homelab).</li>
+				      <li>Metrics and logs are handled by Grafana Cloud: managed Prometheus for metrics and Loki for logs.</li>
+				    </ul>
 
-					<div class="my-0">
-						@code.Code(code.Props{
-							Language:       "go",
-							ShowCopyButton: true,
-							Size:           code.SizeFull,
-						}) {
-							{ 
+				    <p class="mt-4 mb-0">
+				      The overall design worked well, but a few pain points motivated a rethink:
+				    </p>
+
+				    <ul class="list-disc list-inside mt-0 mb-0">
+				      <li>
+				        I managed both infrastructure and Kubernetes using Terraform. While Terraform is great for AWS resources, Grafana Cloud stacks, and DNS, it’s awkward for Kubernetes manifests and Helm charts. I split the work into two Terraform workspaces: one for infra (AWS, DNS, secrets) and one that consumed outputs from the first to render Helm/cluster resources. That caused friction: because my k3s cluster isn’t reachable except via Tailscale, Terraform Cloud’s remote runners couldn’t access it. My workaround was to run plans and applies locally — temporarily adding a GitHub Actions runner to my Tailscale network (there’s a helpful action for that) and performing the Terraform operations from that runner.
+				      </li>
+				      <li>
+				        When the VM got recreated the k3s state was lost and I often had to re-run the k3s workspace manually. The usual workaround was to change something in the infra workspace so that the second workspace would be triggered — not robust. Additionally, managing Helm charts through Terraform has known pitfalls, especially when updating existing charts or forcing rollouts.
+				      </li>
+				    </ul>
+
+				    <p class="mt-0 mb-0">
+				      Those limitations pushed me to find a more robust, maintainable approach.
+				    </p>
+
+				    <h2 id="new-setup" class="text-2xl font-bold mt-8 mb-4 group">
+				        <a href="#new-setup" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to New Setup">
+				            New setup
+				        </a>
+				    </h2>
+
+                    <img class="w-full h-auto my-6" src="https://static.blog.ip812.com/zero-trust-homelab-v2-fluxcd-architecture.png" alt="FluxCD setup"/>
+
+				    <p class="mt-0 mb-0">
+				      My plan was to adopt GitOps with FluxCD to manage the cluster. Flux is lightweight compared to ArgoCD and a natural fit for managing Kubernetes resources and Helm charts from Git. With values.yaml checked into Git, you get a clean, reusable setup and straightforward configuration for each app.
+				    </p>
+
+				    <p class="mt-0 mb-0">
+				      The main challenges I faced were:
+				    </p>
+				    <ul class="list-disc list-inside mt-0 mb-0">
+				      <li>How to get non-sensitive values (DNS names, ARNs, etc.) produced by Terraform into the values.yaml files that FluxCD reads.</li>
+				      <li>How to inject sensitive values (database passwords, tunnel token, API keys, etc.) from Terraform into Kubernetes secrets securely.</li>
+				    </ul>
+
+				    <p class="mt-4 mb-0">
+				      I keep secrets in Terraform Cloud for convenience and to access auto-generated outputs (for example, DNS records). I looked for a clean way to get those values into Git-managed values.yaml files and to deliver sensitive values into Kubernetes without exposing them in Git. The solution I built has two pieces:
+				    </p>
+
+				    <p class="mt-0 mb-0">
+				      1) A small Terraform provider(
+				         <a href="https://registry.terraform.io/providers/ip812/gitsync/latest" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">ip812/gitsync</a>)
+                         that syncs value files in a Git repo — it updates values.yaml with non-sensitive outputs from Terraform so FluxCD can pick them up and reconcile the cluster.
+				    </p>
+
+				<div class="my-0">
+					@code.Code(code.Props{
+						Language:       "go",
+						ShowCopyButton: true,
+						Size:           code.SizeFull,
+					}) {
+						{ 
 `resource "gitsync_values_yaml" "go-template" {
   branch  = "main"
   path    = "values/${local.go_template_app_name}.yaml"
@@ -145,42 +150,46 @@ database:
     backupsBucket: "${aws_s3_bucket.pg_backups.bucket}"
     backupSchedule: "0 0 0 * * *"
 EOT
-}` }
-                        }
-                    </div>
-                    <p class="mt-0 mb-0">
-                       As you can see the sensitive values I don't provide them in the values.yaml file, but I reference from which Kubernetes secret to pick them up.
-                       Okay, but how to pass the sensitive values from Terraform to the cluster as secrets?
-                       Before I made some research and used HashiCorp Vault Secrets, but they deprecated it and now for its alternative which is called HashiCorp Vault Dedicated they want at the time of writing ~450$/month, which is crazy for hobby projects.
-                       That's why I decided to pick Doppler - it has a free plan, nice integration with Terraform and Kubernetes.
-                       Creation of a secret looks like this:
-                    </p>
-					<div class="my-0">
-						@code.Code(code.Props{
-							Language:       "go",
-							ShowCopyButton: true,
-							Size:           code.SizeFull,
-						}) {
-							{ 
+}` } 
+					}
+				</div>
+
+				    <p class="mt-0 mb-0">
+				      The important part is that sensitive values are not stored in the committed values.yaml — instead, they are referenced from Kubernetes secrets by name.
+				    </p>
+
+				    <p class="mt-4 mb-0">
+				      2) For secret management I chose Doppler. HashiCorp Vault Dedicated is far too expensive for a hobby project(at the time of writing ~457$ per month), while Doppler offers a generous free tier plus good Terraform and Kubernetes integrations.
+                      Creating a secret in Doppler looks like this:
+				    </p>
+
+				<div class="my-0">
+					@code.Code(code.Props{
+						Language:       "go",
+						ShowCopyButton: true,
+						Size:           code.SizeFull,
+					}) {
+						{ 
 `resource "doppler_secret" "pg_password" {
   project = "prod"
   config  = "prd"
   name    = "PG_PASSWORD"
   value   = var.pg_password
-}` }
-                        }
-                    </div>
+}` } 
+					}
+				</div>
 
-                    <p class="mt-0 mb-0">
-                       Like this I can pick the secret from Doppler and generate a Kubernetes secret from it (even there is option with processors to change the key value of the secret, if needed): 
-                    </p>
-					<div class="my-0">
-						@code.Code(code.Props{
-							Language:       "yaml",
-							ShowCopyButton: true,
-							Size:           code.SizeFull,
-						}) {
-							{ 
+				    <p class="mt-0 mb-0">
+				      From Doppler I generate Kubernetes secrets (the Doppler Kubernetes operator supports processors to transform key names if necessary). Example:
+				    </p>
+
+				<div class="my-0">
+					@code.Code(code.Props{
+						Language:       "yaml",
+						ShowCopyButton: true,
+						Size:           code.SizeFull,
+					}) {
+						{ 
 `---
 apiVersion: secrets.doppler.com/v1alpha1
 kind: DopplerSecret
@@ -199,44 +208,41 @@ spec:
   processors:
     GHCR_DOCKERCONFIGJSON:
       type: plain
-      asName: .dockerconfigjson` }
-                        }
-                    </div>
-                    <p class="mt-4 mb-0">
-                       With such setup I can easily make a good setup between infra repo that holds the Terraform code for my infrastructure, whenever I want to pass some values from Terraform to the K8s cluster, I just use the gitsync provider and put the needed value in some values.yaml file, where FluxCD will pick it up and will reconcile the cluster.
-                    </p>
+      asName: .dockerconfigjson` } 
+					}
+				</div>
 
-                    <p class="mt-4 mb-0">
-                        So this is I believe the final version of my homelab setup, at least from GitOps perspective.
-                        I believe the synergy of Terraform and FluxCD is really powerful and can be used not only for homelabs, but also for production setups.
-                        If you have any questions or suggestions, feel free to connect with me on social media or to write a comment below.
-                        You can find the source code for this infra repository 
-                        <a href="https://github.com/ip812/infra/tree/d4e2cffc171350b2e3e5f9297e9714674229cf02" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
-                            here
-                        </a>
-                        and for the apps repository
-                        <a href="https://github.com/ip812/apps/tree/1c94cb8e71238c501ca5a29f6342b2cf2924de97" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
-                            here
-                        </a>.
-                    </p>
+				    <p class="mt-4 mb-0">
+				      With this setup the infra repository (Terraform) owns the source of truth for infrastructure and secrets. When Terraform produces values that should land in the cluster, the gitsync provider writes non-sensitive values into the values.yaml files in Git (Flux picks them up). Sensitive values live in Doppler and are projected into Kubernetes secrets via the Doppler operator. FluxCD reconciles the cluster from the Git repo, and Kubernetes pulls secrets from Doppler — no secrets committed to Git and no awkward Terraform workspace choreography.
+				    </p>
+
+				    <p class="mt-4 mb-0">
+				      I consider this my final GitOps-driven iteration for the homelab: a blend of Terraform for infra, FluxCD for cluster reconciliation, a small gitsync bridge for non-sensitive outputs, and Doppler for secrets. The result is simpler, more reliable, and easier to manage — and the approach scales beyond homelabs to production environments.
+				    </p>
+
+				    <p class="mt-4 mb-0">
+				      If you have questions or suggestions, jump into the comments or find me on social media. The infra repo is available
+				      <a href="https://github.com/ip812/infra/tree/d4e2cffc171350b2e3e5f9297e9714674229cf02" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">here</a>
+				      and the apps repo is <a href="https://github.com/ip812/apps/tree/1c94cb8e71238c501ca5a29f6342b2cf2924de97" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">here</a>.
+				    </p>
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
 						<hr class="border-t-2 border-gray-300 mb-6"/>
-                        @components.CommentInputForm(components.CommentInputFormProps{
-                            ArticleID: articles.ZeroTrustHomelabV2ID,
-                        })
-                        <div 
-                            id="comments"
-                            hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.ZeroTrustHomelabV2ID) }
-		                    hx-target="#comments"
-		                    hx-swap="innerHTML"
-                            hx-trigger="load"
-                        >
-                            <div class="mt-4">
-                                @templates.Spinner() {}
-                            </div>
-                        </div>
+					    @components.CommentInputForm(components.CommentInputFormProps{
+					        ArticleID: articles.ZeroTrustHomelabV2ID,
+					    })
+					    <div 
+					        id="comments"
+					        hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.ZeroTrustHomelabV2ID) }
+					        hx-target="#comments"
+					        hx-swap="innerHTML"
+					        hx-trigger="load"
+					    >
+					        <div class="mt-4">
+					            @templates.Spinner() {}
+					        </div>
+					    </div>
 					</div>
 				</div>
 			</div>
