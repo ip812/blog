@@ -73,6 +73,11 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if id == articles.ZeroTrustHomelabV2ID {
+		utils.Render(w, r, views.ArticleZeroTrustHomelabV2())
+		return
+	}
+
 	utils.Render(w, r, views.ArticleNotFound())
 }
 

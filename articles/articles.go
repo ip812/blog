@@ -12,11 +12,18 @@ type ArticleMetadata struct {
 }
 
 var (
-	PlaceholderID      uint64 = 1418336861478195200
-	ZeroTrustHomelabID uint64 = 1417231583613554688
+	PlaceholderID        uint64 = 1418336861478195200
+	ZeroTrustHomelabID   uint64 = 1417231583613554688
+	ZeroTrustHomelabV2ID uint64 = 1428029051347406848
 )
 
 var Metadata = []ArticleMetadata{
+	{
+		ID:          ZeroTrustHomelabV2ID,
+		URL:         "/p/public/articles/" + strconv.FormatUint(ZeroTrustHomelabV2ID, 10),
+		Name:        "Zero trust homelab V2",
+		Description: "An updated version of my homelab setup using FluxCD, Doppler and my own Terraform provider.",
+	},
 	{
 		ID:          ZeroTrustHomelabID,
 		URL:         "/p/public/articles/" + strconv.FormatUint(ZeroTrustHomelabID, 10),
