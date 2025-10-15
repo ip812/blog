@@ -203,16 +203,33 @@ spec:
       asName: .dockerconfigjson` }
                         }
                     </div>
+                    <p class="mt-4 mb-0">
+                       With such setup I can easily make a good setup between infra repo that holds the Terraform code for my infrastructure, whenever  I want to pass some values from Terrform to the K8s cluster, i just use the gitsync provider at put the needed value in some values.yaml file, where FluxCD will pick it up and will reconcile the cluster.
+                    </p>
+
+                    <p class="mt-4 mb-0">
+                        So this is I believe the final version of my homelab setup, at least from GitOps perspective.
+                        I believe the synegy of Terraform and FluxCD is really powerful and can be used not only for homelabs, but also for production setups.
+                        If you have any questions or suggestions, feel free to connect with me on the social media or to write a comment below.
+                        You can find the source code for this infra repository 
+                        <a href="https://github.com/ip812/infra/tree/d4e2cffc171350b2e3e5f9297e9714674229cf02" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
+                            here
+                        </a>
+                        and for the apps repository
+                        <a href="https://github.com/ip812/apps/tree/1c94cb8e71238c501ca5a29f6342b2cf2924de97" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
+                            here
+                        </a>.
+                    </p>
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
 						<hr class="border-t-2 border-gray-300 mb-6"/>
                         @components.CommentInputForm(components.CommentInputFormProps{
-                            ArticleID: articles.PlaceholderID,
+                            ArticleID: articles.ZeroTrustHomelabV2ID,
                         })
                         <div 
                             id="comments"
-                            hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.PlaceholderID) }
+                            hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.ZeroTrustHomelabV2ID) }
 		                    hx-target="#comments"
 		                    hx-swap="innerHTML"
                             hx-trigger="load"
