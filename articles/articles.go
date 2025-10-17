@@ -12,12 +12,19 @@ type ArticleMetadata struct {
 }
 
 var (
-	PlaceholderID        uint64 = 1418336861478195200
-	ZeroTrustHomelabID   uint64 = 1417231583613554688
-	ZeroTrustHomelabV2ID uint64 = 1428029051347406848
+	PlaceholderID                          uint64 = 1418336861478195200
+	ZeroTrustHomelabID                     uint64 = 1417231583613554688
+	ZeroTrustHomelabV2ID                   uint64 = 1428029051347406848
+	AnsiblePlusTailsclaleEqualGreatComboID uint64 = 1428744843063988224
 )
 
 var Metadata = []ArticleMetadata{
+	{
+		ID:          AnsiblePlusTailsclaleEqualGreatComboID,
+		URL:         "/p/public/articles/" + strconv.FormatUint(AnsiblePlusTailsclaleEqualGreatComboID, 10),
+		Name:        "Ansible + Tailscale = 🎉 ",
+		Description: "Manage VMs in a private network with Ansible and Tailscale.",
+	},
 	{
 		ID:          ZeroTrustHomelabV2ID,
 		URL:         "/p/public/articles/" + strconv.FormatUint(ZeroTrustHomelabV2ID, 10),

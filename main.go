@@ -47,6 +47,8 @@ func main() {
 	snowflake.SetStartTime(startTime)
 	snowflake.SetMachineID(1)
 
+	fmt.Println(snowflake.ID())
+
 	slacknotifier := notifier.NewSlack(cfg.Slack.BlogBotToken, log)
 
 	swappableDB := NewSwappableDB()

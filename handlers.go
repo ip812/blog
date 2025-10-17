@@ -78,6 +78,11 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if id == articles.AnsiblePlusTailsclaleEqualGreatComboID {
+		utils.Render(w, r, views.ArticleAnsiblePlusTailscaleEqualGreatCombo())
+		return
+	}
+
 	utils.Render(w, r, views.ArticleNotFound())
 }
 
