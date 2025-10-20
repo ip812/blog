@@ -16,12 +16,12 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
 	@templates.Base() {
 		<div class="flex flex-col min-h-screen justify-between w-full">
 			<div class="flex flex-1 justify-center">
-				<div class="mx-auto w-4/5 md:w-1/2 space-y-8 py-12 font-medium">
-					<div class="mb-8 flex justify-center">
+				<div class="mx-auto w-11/12 md:w-3/5 lg:w-1/2 space-y-6 py-12 font-medium">
+					<div class="mb-6 flex justify-center">
 						@button.Button(button.Props{
 							Href: "/p/public/articles",
 						}) {
-                            Go Back to Articles
+							Go Back to Articles
 						}
 					</div>
 
@@ -29,32 +29,72 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
 						<h1 class="text-3xl font-semibold leading-tight">{ ansiblePlusTailsclaleEqualGreatComboIDMetadata.Name }</h1>
 					</header>
 
-					<p class="my-0">
-						Before we jump into the concrete setup, here’s a short explanation of why you might want this solution.
-						Originally, remote machines were configured manually — you logged in, ran commands, and called it a day.
-						As the number of machines grew and tasks became repetitive, people began writing ad-hoc shell scripts to automate them.
-						That created another problem: many scattered scripts, each with its own conventions, which made maintenance hard.
-						To solve that, teams adopted configuration-management tools like Ansible, Puppet, Chef, and Salt.
-						Later, containerization and orchestration arrived (Docker and then Kubernetes). Kubernetes introduces useful abstractions for running and scaling distributed applications and is great when you manage hundreds or thousands of nodes.
-						However, that abstraction and the added complexity are not always worth it — for small deployments (a single machine or a few machines), Kubernetes can be overkill.
-						In those cases, a configuration-management approach like Ansible is usually simpler and sufficient.
-						In this post I’ll show how to use Ansible to manage Docker containers on remote hosts that live in private networks — and how to access them securely using Tailscale so you don’t need to open public ports or manage SSH keys manually.
+					<h2 id="introduction" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#introduction" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+							Introduction
+						</a>
+					</h2>
+					<p class="mt-2">
+						Before we jump into the concrete setup, here’s a short explanation of why this solution is useful. Originally, remote machines were configured manually — you logged in, ran commands, and called it a day. As the number of hosts grew and tasks became repetitive, people started writing ad‑hoc shell scripts to automate steps. That helped in the short term but led to many scattered scripts with inconsistent conventions, which made maintenance difficult.
 					</p>
 
-					<p class="mt-4 mb-0">
-						The idea is simple: if a machine is joined to our Tailscale network and SSH access is enabled, Ansible can connect to it because Ansible uses SSH.
-						To run Ansible automatically whenever we change our repository, we’ll add a GitHub Actions workflow that runs on push.
-						For the workflow runner to reach machines on Tailscale, we’ll temporarily add the runner to our Tailscale network using Tailscale’s GitHub Action.
+					<p class="mt-4">
+						To solve that, teams adopted configuration‑management tools such as <strong>Ansible</strong>, Puppet, Chef, and Salt. Containerization and orchestration (Docker, then Kubernetes) added higher‑level primitives for running and scaling distributed applications. Kubernetes is powerful for large, dynamic clusters, but for small deployments it often adds unnecessary complexity and operational overhead.
+					</p>
+
+					<p class="mt-4">
+						For a single machine or a handful of hosts, a configuration‑management approach with <strong>Ansible</strong> is usually simpler, more maintainable, and easier to reason about. In this post I’ll show how to use Ansible to manage Docker containers on remote hosts that live in private networks — and how to access them securely using <strong>Tailscale</strong> so you don’t need to open public ports or manage SSH keys manually.
+					</p>
+
+					<p class="mt-4">
+						The idea is simple: if a machine is joined to our Tailscale network and SSH access is enabled, Ansible can connect to it because Ansible uses SSH. To run Ansible automatically whenever we change our repository, we’ll add a GitHub Actions workflow that runs on push. For the workflow runner to reach machines on Tailscale, we’ll temporarily add the runner to our Tailscale network using Tailscale’s GitHub Action.
+					</p>
+
+					<p class="mt-4">
 						This demo configures two AWS VMs to:
 					</p>
-                    <ul class="list-disc list-inside my-0">
+					<ul class="list-disc list-inside space-y-2">
 						<li>Install common utilities (tmux, vim, jq, etc.)</li>
 						<li>Install Docker using Ansible roles/collections</li>
 						<li>Run two Nginx containers on one VM and two Traefik containers on the other</li>
 						<li>Keep both VMs inaccessible from the public internet — reachable only via Tailscale</li>
 					</ul>
 
-					<div class="my-0">
+
+					<h2 id="prerequisites" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#prerequisites" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Prerequisites and Setup">
+							Prerequisites and Setup
+						</a>
+					</h2>
+					<ul class="list-disc list-inside space-y-1 mt-0">
+						<li>Install Tailscale on each target host.</li>
+						<li>Join each host to your tailnet with SSH enabled (<strong>--ssh</strong>).</li>
+						<li>Ensure the hostnames are resolvable via Tailscale MagicDNS.</li>
+					</ul>
+
+					<div class="mt-4">
+						@code.Code(code.Props{
+							Language:       "bash",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`#!/usr/bin/env bash
+
+apt-get update -y
+apt-get install -y curl
+
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up --authkey TAILSCALE_AUTH_KEY --hostname aws-worker-1 --ssh` }
+						}
+					</div>
+
+					<h2 id="inventory" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#inventory" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Inventory">
+							Inventory
+						</a>
+					</h2>
+					<div class="mt-4">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -68,13 +108,17 @@ a2 ansible_host=aws-worker-2` }
 						}
 					</div>
 
-					<p class="mt-2 mb-0">
-						This is the inventory — how Ansible knows what hosts exist and how to reach them.
-						We have two hosts (a1 and a2) in the <code>workers</code> group. When running playbooks you can target the group or individual hosts.
-						The <code>aws-worker-1</code> and <code>aws-worker-2</code> entries are the MagicDNS hostnames assigned by Tailscale; you could also use IP addresses.
-					</p>
+					<ul class="list-disc list-inside mt-3 space-y-1">
+						<li>Defines group <strong>workers</strong> containing hosts <strong>a1</strong> and <strong>a2</strong>.</li>
+						<li><strong>ansible_host</strong> points to Tailscale MagicDNS names (IPs also work).</li>
+					</ul>
 
-					<div class="mt-4 mb-0">
+					<h2 id="requirements" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#requirements" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Ansible Requirements">
+							Ansible Requirements
+						</a>
+					</h2>
+					<div class="mt-4">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -92,12 +136,17 @@ collections:
 						}
 					</div>
 
-					<p class="mt-2 mb-0">
-						The <code>requirements.yml</code> file lists the Ansible roles and collections required by the playbooks.
-						Here we use <code>geerlingguy.docker</code> to install Docker and <code>community.docker</code> to interact with Docker from Ansible.
-					</p>
+					<ul class="list-disc list-inside mt-3 space-y-1">
+						<li><strong>geerlingguy.docker</strong> role: installs Docker.</li>
+						<li><strong>community.docker</strong> collection: modules for managing containers.</li>
+					</ul>
 
-					<div class="mt-4 mb-0">
+					<h2 id="playbook" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#playbook" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Playbook">
+							Playbook
+						</a>
+					</h2>
+					<div class="mt-4">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -126,11 +175,17 @@ collections:
 						}
 					</div>
 
-					<p class="mt-2 mb-0">
-						This playbook installs common utilities and Docker on both hosts (the <code>base</code> and <code>geerlingguy.docker</code> roles), then configures Nginx on <code>a1</code> and Traefik on <code>a2</code>.
-					</p>
+					<ul class="list-disc list-inside space-y-2 mt-3">
+						<li>Installs common utilities and Docker on all workers (<strong>base</strong> and <strong>geerlingguy.docker</strong> roles).</li>
+						<li>Deploys Nginx on <strong>a1</strong> and Traefik on <strong>a2</strong>.</li>
+					</ul>
 
-					<div class="mt-4 mb-0">
+					<h3 id="role-base" class="text-xl font-bold mt-6 mb-3 group">
+						<a href="#role-base" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Base Role">
+							Base Role
+						</a>
+					</h3>
+					<div class="mt-4">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -148,15 +203,20 @@ collections:
 						}
 					</div>
 
-					<p class="mt-2 mb-0">
-						The <code>base</code> role installs common utilities such as <code>tmux</code>, <code>vim</code>, and <code>jq</code>.
-					</p>
+					<ul class="list-disc list-inside mt-3 space-y-1">
+						<li>Installs a small set of common CLI tools across all hosts.</li>
+					</ul>
 
-					<p class="mt-4 mb-0">
-						Below are the Nginx tasks. Traefik is set up in a similar way.
-					</p>
+					<h3 id="role-nginx" class="text-xl font-bold mt-6 mb-3 group">
+						<a href="#role-nginx" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Nginx Role">
+							Nginx Role
+						</a>
+					</h3>
+					<ul class="list-disc list-inside mt-0 mb-2 space-y-1">
+						<li>Tasks are split to keep responsibilities clear and files small.</li>
+					</ul>
 
-					<div class="my-0">
+					<div class="mt-3">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -172,7 +232,7 @@ collections:
 						}
 					</div>
 
-					<div class="my-1">
+					<div class="mt-2">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -191,7 +251,7 @@ collections:
 						}
 					</div>
 
-					<div class="mt-0 mb-2">
+					<div class="mt-2">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -210,45 +270,22 @@ collections:
 						}
 					</div>
 
-					<p class="mt-4 mb-0">
-						We import two task files that start <code>nginx:alpine</code> (exposed on port <code>8080</code>) and <code>nginx:latest</code> (exposed on port <code>8081</code>).
-						Traefik is configured in a comparable way on the other host.
+					<h2 id="ci-workflow" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#ci-workflow" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to CI Workflow">
+							CI Workflow
+						</a>
+					</h2>
+					<p class="mt-0">
+						To run Ansible from CI, the workflow does four things:
 					</p>
+					<ol class="list-decimal list-inside space-y-2 mt-2">
+						<li>Check out the repository.</li>
+						<li>Temporarily add the runner to your Tailscale network using the Tailscale GitHub Action.</li>
+						<li>Install Ansible roles.</li>
+						<li>Run the playbook against the Tailscale-accessible hosts.</li>
+					</ol>
 
-					<p class="mt-4 mb-0">
-						One important operational detail: Ansible connects over SSH. A typical setup requires either opening port 22 or provisioning SSH keys on every host — both of which add operational overhead and increase the attack surface.
-						Instead, we’ll use Tailscale (a mesh VPN) so the hosts don't need public ports. With Tailscale + its SSH support enabled on the host, Ansible can reach the machines over the private Tailscale network.
-						At minimum, install Tailscale and join the host to your Tailscale network with the <code>--ssh</code> flag. A minimal setup looks like:
-					</p>
-
-					<div class="mt-6 mb-0">
-						@code.Code(code.Props{
-							Language:       "bash",
-							ShowCopyButton: true,
-							Size:           code.SizeSm,
-						}) {
-							{ 
-`#!/usr/bin/env bash
-
-apt-get update -y
-apt-get install -y curl
-
-curl -fsSL https://tailscale.com/install.sh | sh
-tailscale up --authkey TAILSCALE_AUTH_KEY --hostname aws-worker-1 --ssh` }
-						}
-					</div>
-
-					<p class="mt-4 mb-0">
-						To automate execution from CI, create a GitHub Actions workflow that:
-						<ol class="list-decimal list-inside mt-2">
-							<li>Checks out the repository</li>
-							<li>Adds the runner to your Tailscale network (temporarily) using the Tailscale GitHub Action</li>
-							<li>Installs Ansible roles</li>
-							<li>Runs the Ansible playbook against the Tailscale-accessible hosts</li>
-						</ol>
-					</p>
-
-					<div class="mt-6 mb-0">
+					<div class="mt-4">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -298,27 +335,31 @@ jobs:
 						}
 					</div>
 
-					<p class="mt-4 mb-0">
-						That’s the gist of it: use Tailscale to avoid exposing SSH to the internet, and use a temporary, Tailscale-connected GitHub Actions runner to run Ansible against private hosts.
+					<h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#conclusion" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
+							Conclusion
+						</a>
+					</h2>
+					<p class="mt-0">
+						Use Tailscale to avoid exposing SSH, and run Ansible from a temporary Tailscale-connected GitHub Actions runner to manage private hosts safely.
 					</p>
 
-					<ul class="list-disc list-inside mt-0 mb-0">
+					<ul class="list-disc list-inside mt-2 space-y-2">
 						<li>
 							You can find the source code for this project
-							<a href="https://github.com/ip812/infra/tree/002fd55652cd9c85fa288119230138fa775742c0" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+							<a href="https://github.com/iypetrov/ansible-with-tailscale/tree/38ad005bf842ad668469b7497407f3adf1a45d4e" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
 								here
 							</a>.
 						</li>
 						<li>
-							I also recorded a walkthrough video showing how to set up Tailscale and a GitHub Actions runner to run the Ansible playbook:
-							<a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-								Watch the video
+							A live demo is available
+							<a href="https://www.youtube.com/watch?v=rznH28MA8xE" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+								here
 							</a>.
-							If you have questions or suggestions, feel free to comment below or reach out on social media.
 						</li>
 					</ul>
 
-					<div class="mt-12">
+					<div class="mt-10">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
 						<hr class="border-t-2 border-gray-300 mb-6"/>
 						@components.CommentInputForm(components.CommentInputFormProps{
