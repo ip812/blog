@@ -58,6 +58,10 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
                         - Run on one of the VMs 2 Nginx containers and on the other VM run 2 Traefik containers.
                         - Everything while the VM can't be accessed from the public internet, only via Tailscale.
 					</p>
+
+				    <p class="mt-4">
+                        So here’s what this Ansible setup is doing. 
+					</p>
 					<div class="mt-6">
 						@code.Code(code.Props{
 							Language:       "yaml",
@@ -65,13 +69,240 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
 							Size:           code.SizeSm,
 						}) {
 							{ 
-`roles:
+`# ansible/inventory.ini
+[workers]
+a1 ansible_host=aws-worker-1
+a2 ansible_host=aws-worker-2` }
+						}
+					</div>
+				    <p class="mt-4">
+                        First off, there’s an inventory — that’s how Ansible knows what machines exist and how to reach them.
+                        Here, we have two machines — a1 and a2 — grouped under [workers].
+                        When you run a playbook, you can target either the entire group (workers) or individual hosts.
+                        Here the aws-worker-1 and aws-worker-2 are the MagicDNS hostnames for the two VMs, but you can use the IP addresses as well.
+					</p>
+
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`# ansible/requirements.yml
+roles:
   - name: geerlingguy.docker
     version: 7.4.1
 
 collections:
   - name: community.docker
     version: ">=3.0.0"` }
+						}
+					</div>
+				    <p class="mt-4">
+                        The requirements.yml file is used to define the roles and collections that are needed for the playbook.
+                        In this case, we need the geerlingguy.docker role to install Docker on the machines.
+                        And we need the community.docker collection to enable Ansible to interact with Docker.
+					</p>
+
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`# ansible/playbook.yml
+- name: Install dependencies
+  hosts: workers
+  become: yes
+  roles:
+    - base
+    - geerlingguy.docker
+
+- name: Install nginx on AWS Worker 1
+  hosts: a1
+  become: yes
+  roles:
+    - nginx
+
+- name: Install traefik on AWS Worker 2
+  hosts: a2
+  become: yes
+  roles:
+    - traefik` }
+						}
+					</div>
+				    <p class="mt-4">
+                        This is the playbook that will be used to configure the two VMs.
+                        It runs the base role to install some basic utilities and the geerlingguy.docker role to install Docker on both machines.
+                        Then it configures Nginx on the first machine and Traefik on the second machine.
+					</p>
+
+
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`# ansible/roles/base/tasks/main.yml
+- name: Install common utilities
+  apt:
+    name:
+      - tmux
+      - vim
+      - jq
+    state: present` }
+						}
+					</div>
+				    <p class="mt-4">
+                        This role is used to install tmux, vim, jq.
+					</p>
+
+				    <p class="mt-4">
+                        Now I will describe the process for Nginx, for Traefik it is similar. 
+					</p>
+
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`# ansible/roles/nginx/tasks/main.yml
+- name: Nginx Alpine
+  import_tasks: nginx_alpine.yml
+
+- name: Nginx Latest
+  import_tasks: nginx_latest.yml` }
+						}
+					</div>
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`# ansible/roles/nginx/tasks/nginx_alpine.yml
+- name: Start nginx:alpine container
+  community.docker.docker_container:
+    name: nginx_alpine
+    image: nginx:alpine
+    state: started
+    ports:
+      - "8080:80"
+    restart_policy: no` }
+						}
+					</div>
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`# ansible/roles/nginx/tasks/nginx_latest.yml
+- name: Start nginx:latest container
+  community.docker.docker_container:
+    name: nginx_latest
+    image: nginx:latest
+    state: started
+    ports:
+      - "8081:80"
+    restart_policy: no` }
+						}
+					</div>
+				    <p class="mt-4">
+                        Here in the main.yml file we are importing the tasks for the Alpine and Latest versions of Nginx.
+                        And we see that in the alpine file we are starting the nginx:alpine container on port 8080 and in the latest file we are starting the nginx:latest container on port 8081.
+                        For Traefik it is similar.
+					</p>
+
+				    <p class="mt-4">
+                        This is the Ansible setup, but we didn't discuss somehitng important yet.
+                        Ansible uses SSH to connect to the remote hosts so in tipical setup we should do 2 things;
+                        - Add a SSH key to the remote host so that Ansible can connect to it.
+                        - Open port 22 on the remote host so that Ansible can connect to it.
+                        In practice this creates some problems like now we have npw to manage a securly SSH keys and the open port 22 creates a security risk.
+                        So to solve this problem we can use Tailscale to connect to the remote host.
+                        Tailscale is a mesh VPN that allows you to connect to the remote host without opening any ports.
+                        With it we can run our Ansible playbook on the remote host without opening any ports.
+                        To achive this 2 things are requred.
+                        - We need to install Tailscale on the remote host and to add it to our Tailscale network using --ssh flag in order to allow Ansible to connect to it via SSH.
+                          It minmal setup should looks like this:
+					</p>
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "bash",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`#!/usr/bin/env bash
+
+apt-get update -y
+apt-get install -y curl
+
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up --authkey TAILSCALE_AUTH_KEY --hostname aws-worker-1 --ssh` }
+						}
+					</div>
+                    <p class="mt-4">
+                        SO everything to be automatic we will create a GitHub Action workflow that will be triggered every time we push a change to our repository that will run the Ansible playbook on the remote hosts.
+                        In order to achive this we have to add the GitHub Action runner to our Tailscale network temporarily and then run the Ansible playbook on the remote hosts.
+                        The setup should look like this:
+                    </p>
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "yaml",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`# .github/workflows/ansible-run-playbook.yml
+---
+name: Ansible Run Playbook
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ansible/**'
+
+jobs:
+  run-playbook:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Install Ansible roles
+        run: ansible-galaxy install -r ansible/requirements.yml
+
+      - name: Run Ansible playbook
+        uses: dawidd6/action-ansible-playbook@v5
+        with:
+          playbook: ansible/playbook.yml
+          options: |
+            --inventory ansible/inventory.ini
+            --user ubuntu
+            --verbose` }
 						}
 					</div>
 
