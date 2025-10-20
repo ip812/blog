@@ -53,9 +53,6 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
 						<li>Run two Nginx containers on one VM and two Traefik containers on the other</li>
 						<li>Keep both VMs inaccessible from the public internet — reachable only via Tailscale</li>
 					</ul>
-					<p class="mt-4 mb-0">
-						Below is the Ansible setup used in the demo.
-					</p>
 
 					<div class="my-0">
 						@code.Code(code.Props{
@@ -71,13 +68,13 @@ a2 ansible_host=aws-worker-2` }
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-2 mb-0">
 						This is the inventory — how Ansible knows what hosts exist and how to reach them.
 						We have two hosts (a1 and a2) in the <code>workers</code> group. When running playbooks you can target the group or individual hosts.
 						The <code>aws-worker-1</code> and <code>aws-worker-2</code> entries are the MagicDNS hostnames assigned by Tailscale; you could also use IP addresses.
 					</p>
 
-					<div class="mt-6">
+					<div class="mt-4 mb-0">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -95,12 +92,12 @@ collections:
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-2 mb-0">
 						The <code>requirements.yml</code> file lists the Ansible roles and collections required by the playbooks.
 						Here we use <code>geerlingguy.docker</code> to install Docker and <code>community.docker</code> to interact with Docker from Ansible.
 					</p>
 
-					<div class="mt-6">
+					<div class="mt-4 mb-0">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -129,11 +126,11 @@ collections:
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-2 mb-0">
 						This playbook installs common utilities and Docker on both hosts (the <code>base</code> and <code>geerlingguy.docker</code> roles), then configures Nginx on <code>a1</code> and Traefik on <code>a2</code>.
 					</p>
 
-					<div class="mt-6">
+					<div class="mt-4 mb-0">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -151,15 +148,15 @@ collections:
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-2 mb-0">
 						The <code>base</code> role installs common utilities such as <code>tmux</code>, <code>vim</code>, and <code>jq</code>.
 					</p>
 
-					<p class="mt-4">
+					<p class="mt-4 mb-0">
 						Below are the Nginx tasks. Traefik is set up in a similar way.
 					</p>
 
-					<div class="mt-6">
+					<div class="my-0">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -175,7 +172,7 @@ collections:
 						}
 					</div>
 
-					<div class="mt-6">
+					<div class="my-1">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -194,7 +191,7 @@ collections:
 						}
 					</div>
 
-					<div class="mt-6">
+					<div class="mt-0 mb-2">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
@@ -213,18 +210,18 @@ collections:
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-4 mb-0">
 						We import two task files that start <code>nginx:alpine</code> (exposed on port <code>8080</code>) and <code>nginx:latest</code> (exposed on port <code>8081</code>).
 						Traefik is configured in a comparable way on the other host.
 					</p>
 
-					<p class="mt-4">
+					<p class="mt-4 mb-0">
 						One important operational detail: Ansible connects over SSH. A typical setup requires either opening port 22 or provisioning SSH keys on every host — both of which add operational overhead and increase the attack surface.
 						Instead, we’ll use Tailscale (a mesh VPN) so the hosts don't need public ports. With Tailscale + its SSH support enabled on the host, Ansible can reach the machines over the private Tailscale network.
 						At minimum, install Tailscale and join the host to your Tailscale network with the <code>--ssh</code> flag. A minimal setup looks like:
 					</p>
 
-					<div class="mt-6">
+					<div class="mt-6 mb-0">
 						@code.Code(code.Props{
 							Language:       "bash",
 							ShowCopyButton: true,
@@ -241,7 +238,7 @@ tailscale up --authkey TAILSCALE_AUTH_KEY --hostname aws-worker-1 --ssh` }
 						}
 					</div>
 
-					<p class="mt-4">
+					<p class="mt-4 mb-0">
 						To automate execution from CI, create a GitHub Actions workflow that:
 						<ol class="list-decimal list-inside mt-2">
 							<li>Checks out the repository</li>
@@ -251,7 +248,7 @@ tailscale up --authkey TAILSCALE_AUTH_KEY --hostname aws-worker-1 --ssh` }
 						</ol>
 					</p>
 
-					<div class="mt-6">
+					<div class="mt-6 mb-0">
 						@code.Code(code.Props{
 							Language:       "yaml",
 							ShowCopyButton: true,
