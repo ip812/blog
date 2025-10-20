@@ -27,7 +27,23 @@ templ ArticleAnsiblePlusTailscaleEqualGreatCombo() {
 					<header class="flex flex-col w-full justify-center items-center mb-2">
 						<h1 class="text-3xl font-semibold leading-tight">{ ansiblePlusTailsclaleEqualGreatComboIDMetadata.Name }</h1>
 					</header>
-                    ref - https://chatgpt.com/c/68f2b0e3-f068-832d-bcb6-4f36360c93f6
+
+				    <p class="my-0">
+                        Before diving into the concrete setup I want to explain shortly why you might need such solution after all.
+                        At the begiing the way people configuring remote machines were to manually go to the machines run some commands and call the day.
+                        When the thing becaume to repetative and the number of machines grew, people started to write custom Shell scripts to automate the process.
+                        But this created other issue - now there were a lot of small scripts everywhere, everyone had their own way of doing things and it was hard to maintain.
+                        People then decided that it is time to make some more universal and robust way of managing their servers - the came the era of config management tools like Ansible, Puppet, Chef, Salt and etc.
+                        The next logical think that came after Docker came to the scene was orchestrators most popular of which is Kubernetes.
+                        The whole idea of Kubernetes was to include best practices for running containers and overall software on servers in a way that it allows the apps to run in distributed fashion and to be able to scale up and down as needed.
+                        This is great solution when you have hundreds or thousands of machines to manage. The goal of Kubernetes is to create abstraction over the underlying infra and for the user it not no matter how much machines are running,
+                        is some machine down, is some machine patching and so on. The idea is to hide everything under some API and Kubernetes to manage the indvidiual machines and for the users to nbe important I want to run application A and thats it.
+                        Now the logical question arrise - is this abstraction needed in every case. And the answear is no - you have a single or a few machines this is overkill, you don't need that extra comlexity, because it doen't bring value to you.
+                        In such cases conifig management tools in my opinion are more than enough to fulfill your needs.
+                        And in this blog post I will show you how with Ansible you can manage docker containers on a remote host/hosts and even more- how this machines can be in private networks and access them via Tailscale
+                        so to avaoid the need of open ports or management of SSH keys.
+					</p>
+
 				    <p class="my-0">
 						So now let's deep dive into the setup.
                         The idea is that if a machine is added to out Tailscale network and if ssh access is enabled for that machine, Ansible should be able to connect to it, because Ansible uses SSH for connecting to remote hosts by using push model.
@@ -58,6 +74,25 @@ collections:
     version: ">=3.0.0"` }
 						}
 					</div>
+
+                    <p class="mt-4 mb-0">
+                        So this is how you can use Ansible and Tailscale to manage your infrastructure without opening any ports to the public internet.
+                    </p>
+                    <ul class="list-disc list-inside mt-0 mb-0">
+                        <li>
+                            You can find the source code for this project
+                            <a href="https://github.com/ip812/infra/tree/002fd55652cd9c85fa288119230138fa775742c0" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
+                                here
+                            </a>.
+                        </li>
+                        <li>
+                            <a href="https://www.youtube.com/watch?v=9ZkzPYZTazY" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"> 
+                                Here
+                            </a>
+                            I recorded a video showing how to setup Tailscale and GitHub Action runner to run the Ansible playbook on the remote hosts.
+                            If you have any questions or suggestions, feel free to connect with me on the social media or to write a comment below.
+                        </li>
+                    </ul>
 
 					<div class="mt-12">
 						<h2 class="text-2xl font-bold mb-4">Comments</h2>
