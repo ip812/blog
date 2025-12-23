@@ -26,6 +26,7 @@ templ ArticlePlaceholder() {
 
 					<header class="flex flex-col w-full justify-center items-center mb-2">
 						<h1 class="text-3xl font-semibold leading-tight">{ placeholderMetadata.Name }</h1>
+                        <h3 class="text-md text-gray-500 mt-2 font-bold">{ fmt.Sprintf("%d min read", placeholderMetadata.ReadTimeMinutes) }</h3>
 					</header>
 					<div class="mt-6">
 						@code.Code(code.Props{
