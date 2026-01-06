@@ -17,9 +17,17 @@ var (
 	ZeroTrustHomelabID                     uint64 = 1417231583613554688
 	ZeroTrustHomelabV2ID                   uint64 = 1428029051347406848
 	AnsiblePlusTailsclaleEqualGreatComboID uint64 = 1428744843063988224
+	CloudflareWorkersImpressionsID         uint64 = 1458103253970456576
 )
 
 var Metadata = []ArticleMetadata{
+	{
+		ID:          CloudflareWorkersImpressionsID,
+		URL:         "/p/public/articles/" + strconv.FormatUint(CloudflareWorkersImpressionsID, 10),
+		Name:        "My impressions of Cloudflare Workers platform",
+		Description: "My thoughts after building an e-commerce site using Cloudflare ecosystem.",
+		ReadTimeMinutes: 3,
+	},
 	{
 		ID:          AnsiblePlusTailsclaleEqualGreatComboID,
 		URL:         "/p/public/articles/" + strconv.FormatUint(AnsiblePlusTailsclaleEqualGreatComboID, 10),

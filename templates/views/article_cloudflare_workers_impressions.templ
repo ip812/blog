@@ -1,0 +1,75 @@
+package views
+
+import (
+    "fmt"
+	"github.com/ip812/blog/articles"
+	"github.com/ip812/blog/templates"
+	"github.com/ip812/blog/templates/components"
+	"github.com/ip812/blog/templates/button"
+	"github.com/ip812/blog/templates/code"
+)
+
+var cloudflareWorkersImpressionsMetadata = articles.GetByID(articles.CloudflareWorkersImpressionsID)
+
+templ ArticleCloudflareWorkersImpressions() {
+	@templates.Base() {
+		<div class="flex flex-col min-h-screen justify-between w-full">
+			<div class="flex flex-1 justify-center">
+				<div class="mx-auto w-4/5 md:w-1/2 space-y-8 py-12 font-medium">
+					<div class="mb-8 flex justify-center">
+						@button.Button(button.Props{
+							Href: "/p/public/articles",
+						}) {
+                            Go Back to Articles
+						}
+					</div>
+
+					<header class="flex flex-col w-full justify-center items-center mb-2">
+						<h1 class="text-3xl font-semibold leading-tight">{ cloudflareWorkersImpressionsMetadata.Name }</h1>
+                        <h3 class="text-md text-gray-500 mt-2 font-bold">{ fmt.Sprintf("%d min read", cloudflareWorkersImpressionsMetadata.ReadTimeMinutes) }</h3>
+					</header>
+					<div class="mt-6">
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeSm,
+						}) {
+							{ 
+`package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}` }
+						}
+					</div>
+					<img class="w-full h-auto my-6" src="https://www.jaegertracing.io//img/jaeger-logo.png" alt="Cloudflare Workers impressions article"/>
+					<p>
+						Some Go code.
+					</p>
+
+					<div class="mt-12">
+						<h2 class="text-2xl font-bold mb-4">Comments</h2>
+						<hr class="border-t-2 border-gray-300 mb-6"/>
+                        @components.CommentInputForm(components.CommentInputFormProps{
+                            ArticleID: articles.CloudflareWorkersImpressionsID,
+                        })
+                        <div 
+                            id="comments"
+                            hx-get={ fmt.Sprintf("/api/public/v0/articles/%d/comments", articles.CloudflareWorkersImpressionsID) }
+		                    hx-target="#comments"
+		                    hx-swap="innerHTML"
+                            hx-trigger="load"
+                        >
+                            <div class="mt-4">
+                                @templates.Spinner() {}
+                            </div>
+                        </div>
+					</div>
+				</div>
+			</div>
+			@templates.Footer()
+		</div>
+	}
+}

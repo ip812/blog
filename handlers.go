@@ -83,6 +83,11 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if id == articles.CloudflareWorkersImpressionsID {
+		utils.Render(w, r, views.ArticleCloudflareWorkersImpressions())
+		return
+	}
+
 	utils.Render(w, r, views.ArticleNotFound())
 }
 
