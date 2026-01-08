@@ -10,12 +10,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/XSAM/otelsql"
 	"github.com/cenkalti/backoff/v5"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/form"
 	"github.com/go-playground/validator/v10"
 	"github.com/godruoyi/go-snowflake"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/riandyrn/otelchi"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
@@ -23,10 +27,12 @@ import (
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/logger"
 	"github.com/ip812/blog/notifier"
+	"github.com/ip812/blog/o11y"
 	"github.com/ip812/blog/utils"
 )
 
 const (
+	serviceName           = "blog"
 	dbConnectTimeout      = 10 * time.Second
 	dbMaxOpenConnections  = 10
 	retryMaxElapsedTime   = 15 * time.Minute
@@ -42,6 +48,10 @@ func main() {
 
 	cfg := config.New()
 	log := logger.New(cfg)
+	tracer, err := o11y.NewTracer(serviceName)
+	if err != nil {
+		log.Error("unable to initialize tracer due: %v", err)
+	}
 
 	// https://snowsta.mp
 	startTime, _ := time.Parse(time.RFC3339, "2015-01-01T00:00:00Z")
@@ -52,7 +62,7 @@ func main() {
 
 	swappableDB := NewSwappableDB()
 
-	apiServer := startHTTPServer(cfg, log, swappableDB, slacknotifier)
+	apiServer := startHTTPServer(cfg, log, tracer, swappableDB, slacknotifier)
 	metricsServer := startMetricsServer(cfg, log)
 
 	db, err := connectToDatabaseWithRetry(ctx, cfg, log)
@@ -109,9 +119,26 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 		connCtx, cancel := context.WithTimeout(ctx, dbConnectTimeout)
 		defer cancel()
 
-		db, err := sql.Open("postgres", connectionString)
+		db, err := otelsql.Open(
+			"postgres", 
+			connectionString, 
+			otelsql.WithAttributes(
+				semconv.DBSystemNamePostgreSQL,
+			),
+		)
 		if err != nil {
 			log.Warn("failed to open the database connection: %v", err.Error())
+			return conn, err
+		}
+
+		_, err = otelsql.RegisterDBStatsMetrics(
+			db, 
+			otelsql.WithAttributes(
+				semconv.DBSystemNamePostgreSQL,
+			),
+		)
+		if err != nil {
+			log.Warn("failed to register database metrics: %v", err.Error())
 			return conn, err
 		}
 
@@ -136,7 +163,13 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 	return conn.db, err
 }
 
-func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper, slacknotifier *notifier.Slack) *http.Server {
+func startHTTPServer(
+	cfg *config.Config, 
+	log logger.Logger, 
+	tracer oteltrace.Tracer,
+	db DBWrapper, 
+	slacknotifier *notifier.Slack,
+) *http.Server {
 	formDecoder := form.NewDecoder()
 	formValidator := validator.New(validator.WithRequiredStructEnabled())
 
@@ -144,12 +177,14 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper, slackn
 		config:        cfg,
 		formDecoder:   formDecoder,
 		formValidator: formValidator,
+		tracer:        tracer,
 		slacknotifier: slacknotifier,
 		db:            db,
 		log:           log,
 	}
 
 	mux := chi.NewRouter()
+	mux.Use(otelchi.Middleware(serviceName, otelchi.WithChiRoutes(mux)))
 	mux.Handle("/static/*", handler.StaticFiles())
 	mux.With().Route("/p", func(mux chi.Router) {
 		mux.Route("/public", func(mux chi.Router) {

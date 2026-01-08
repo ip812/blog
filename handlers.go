@@ -21,6 +21,9 @@ import (
 	"github.com/ip812/blog/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -37,6 +40,7 @@ type Handler struct {
 	config        *config.Config
 	formDecoder   *form.Decoder
 	formValidator *validator.Validate
+	tracer        oteltrace.Tracer
 	slacknotifier *notifier.Slack
 	log           logger.Logger
 
@@ -118,23 +122,6 @@ func getOrSetUsername(w http.ResponseWriter, r *http.Request) string {
 }
 
 func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error {
-	username := getOrSetUsername(w, r)
-
-	db, err := hnd.db.DB()
-	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
-		return utils.Render(w, r, components.NoComments())
-	}
-
-	tx, err := db.BeginTx(r.Context(), nil)
-	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
-		return utils.Render(w, r, components.NoComments())
-	}
-	defer tx.Rollback()
-
-	queries := database.New(tx)
-
 	articleID, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		status.AddToast(w, status.WarningStatusBadRequest(status.WarnNotNumbericID))
@@ -153,6 +140,30 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 		return utils.Render(w, r, components.NoComments())
 	}
 
+	_, span := hnd.tracer.Start(
+		r.Context(),
+		"CreateComment(",
+		oteltrace.WithAttributes(attribute.String("article", string(props.ArticleID))),
+	)
+	defer span.End()
+
+	username := getOrSetUsername(w, r)
+
+	db, err := hnd.db.DB()
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
+		return utils.Render(w, r, components.NoComments())
+	}
+
+	tx, err := db.BeginTx(r.Context(), nil)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
+		return utils.Render(w, r, components.NoComments())
+	}
+	defer tx.Rollback()
+
+	queries := database.New(tx)
+
 	_, err = queries.CreateComment(r.Context(), database.CreateCommentParams{
 		ID:        int64(snowflake.ID()),
 		ArticleID: int64(articleID),
@@ -161,22 +172,30 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 	})
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(status.ErrCreateArticleComment))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return utils.Render(w, r, components.NoComments())
 	}
 
 	comments, err := queries.GetAllCommentsByArticleID(r.Context(), int64(articleID))
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(status.ErrGetAllArticleComments))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return utils.Render(w, r, components.NoComments())
 	}
 
 	if err := tx.Commit(); err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(status.ErrDB))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return utils.Render(w, r, components.NoComments())
 	}
 
 	if len(comments) == 0 {
 		hnd.log.Warn("no comments found after creating a comment")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return utils.Render(w, r, components.NoComments())
 	}
 
@@ -192,6 +211,8 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 		),
 	); err != nil {
 		hnd.log.Error("failed to send Slack notification for new comment: %v", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 	}
 
 	commentProps := []components.CommentProps{}
