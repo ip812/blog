@@ -15,6 +15,7 @@ import (
 	"github.com/go-playground/form"
 	"github.com/go-playground/validator/v10"
 	"github.com/godruoyi/go-snowflake"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
@@ -51,7 +52,8 @@ func main() {
 
 	swappableDB := NewSwappableDB()
 
-	server := startHTTPServer(cfg, log, swappableDB, slacknotifier)
+	apiServer := startHTTPServer(cfg, log, swappableDB, slacknotifier)
+	metricsServer := startMetricsServer(cfg, log)
 
 	db, err := connectToDatabaseWithRetry(ctx, cfg, log)
 	if err != nil {
@@ -74,10 +76,16 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := apiServer.Shutdown(shutdownCtx); err != nil {
 		log.Error("error shutting down server: %s", err.Error())
 	} else {
 		log.Info("server shutdown cleanly")
+	}
+
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("error shutting down server: %s", err.Error())
+	} else {
+		log.Info("metrics server shutdown cleanly")
 	}
 }
 
@@ -178,6 +186,32 @@ func startHTTPServer(cfg *config.Config, log logger.Logger, db DBWrapper, slackn
 		log.Info("server started on %s", cfg.App.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("cannot start server: %s", err.Error())
+		}
+	}()
+
+	return server
+}
+
+func startMetricsServer(
+	cfg *config.Config,
+	log logger.Logger,
+) *http.Server {
+	mux := chi.NewRouter()
+
+	mux.Handle("/metrics", promhttp.Handler())
+
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%s", cfg.App.MetricsPort),
+		IdleTimeout:  serverIdleTimeout,
+		ReadTimeout:  serverReadTimeout,
+		WriteTimeout: serverWriteTimeout,
+		Handler:      mux,
+	}
+
+	go func() {
+		log.Info("metrics server started on %s", cfg.App.MetricsPort)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("cannot start metrics server: %s", err.Error())
 		}
 	}()
 

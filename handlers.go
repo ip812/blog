@@ -19,6 +19,15 @@ import (
 	"github.com/ip812/blog/templates/components"
 	"github.com/ip812/blog/templates/views"
 	"github.com/ip812/blog/utils"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+        opsNewCommentsReceived = promauto.NewGauge(prometheus.GaugeOpts{
+                Name: "blog_new_comments_received_total",
+                Help: "Total number of new comments received",
+        })
 )
 
 //go:embed static
@@ -171,6 +180,7 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 		return utils.Render(w, r, components.NoComments())
 	}
 
+	opsNewCommentsReceived.Inc()
 	hnd.log.Info("comment created successfully for article ID %d", articleID)
 	if err := hnd.slacknotifier.SendMsg(
 		hnd.config.Slack.GeneralChannelID,

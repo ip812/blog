@@ -27,6 +27,7 @@ type Config struct {
 		Env    Environment
 		Domain string
 		Port   string
+		MetricsPort string
 	}
 
 	Database struct {
@@ -58,6 +59,7 @@ func New() *Config {
 
 	cfg.App.Domain = os.Getenv("APP_DOMAIN")
 	cfg.App.Port = os.Getenv("APP_PORT")
+	cfg.App.MetricsPort = os.Getenv("APP_METRICS_PORT")
 	cfg.Database.Name = os.Getenv("DB_NAME")
 	cfg.Database.Endpoint = os.Getenv("DB_ENDPOINT")
 	cfg.Database.SSLMode = os.Getenv("DB_SSL_MODE")
