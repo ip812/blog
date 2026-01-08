@@ -26,6 +26,7 @@ import (
 
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/logger"
+	"github.com/ip812/blog/middleware"
 	"github.com/ip812/blog/notifier"
 	"github.com/ip812/blog/o11y"
 	"github.com/ip812/blog/utils"
@@ -185,6 +186,7 @@ func startHTTPServer(
 
 	mux := chi.NewRouter()
 	mux.Use(otelchi.Middleware(serviceName, otelchi.WithChiRoutes(mux)))
+	mux.Use(middleware.TraceIDHeaderMiddleware)
 	mux.Handle("/static/*", handler.StaticFiles())
 	mux.With().Route("/p", func(mux chi.Router) {
 		mux.Route("/public", func(mux chi.Router) {
