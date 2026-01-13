@@ -281,6 +281,8 @@ func (f *File) Close() error {
 	return fmt.Errorf("Error closing file: %s", f.Name)
 }
 
+// Here we use the err named return value to capture errors from close
+// the errors.Join function combines the error from the main function and the error from Close
 func correctErrorHandling() (err error) {
 	file, err := Open("nonexistent.txt")
 	if err != nil {
@@ -295,6 +297,200 @@ func correctErrorHandling() (err error) {
 
 // Random error
 // Error closing file: nonexistent.txt` }
+						}
+					</div>
+
+					<h2 id="deferpanicrecover" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#deferpanicrecover" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
+							Defer, Panics, and Recover
+						</a>
+					</h2>
+
+                    <p class="mt-2">
+                        In Go, when a panic occurs, the normal execution flow is interrupted, and the program starts unwinding the stack.
+                        The only way to recover from a panic is by using the <b>recover</b> function, which can only be called within a deferred function.
+                        This is true, because deferred functions are guaranteed to run when a function exits, even if it exits due to a panic.
+                        Here’s an example that demonstrates how <b>defer</b>, <b>panic</b>, and <b>recover</b> work together:
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func foo() (err error) {
+    defer func() {
+        if r := recover(); r != nil {
+	    		err = fmt.Errorf("no worries, recovered from panic: %v", r)
+        }
+  }()
+	panic("trigger panic for demonstration")
+}
+// no worries, recovered from panic: trigger panic for demonstration}` }
+						}
+					</div>
+
+					<h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#conclusion" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
+							Common Errors
+						</a>
+					</h2>
+
+					<p class="mt-0">
+                        To wrap up, here I want to highlight 2 popular mistakes that newcomers to Go often make, when they start using <b>defer</b>:
+					</p>
+
+					<h2 id="errone" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#errone" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Error 1: Always put the defer after error check 
+						</a>
+					</h2>
+
+                    <p class="mt-2">
+                        A common mistake is to place the <b>defer</b> statement before checking for errors when opening a resource.
+                        If the resource fails to open, the deferred function will attempt to Close non-existent resource, which is unwanted behavior.
+                        Always ensure that the resource is successfully opened before deferring its closure.
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func wrongErrorHandling() {
+	file, err := os.Open("nonexistent.txt")
+	defer file.Close() // wrong, should be below error check
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+}
+
+func correctErrorHandling() {
+	file, err := os.Open("nonexistent.txt")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close() // correct
+}` }
+						}
+					</div>
+
+					<h2 id="errtwo" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#errtwo" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Error 2: Don’t call defer in a loop
+						</a>
+					</h2>
+
+                    <p class="mt-2">
+                        Another common mistake is to place <b>defer</b> statements inside loops, since deferred functions are executed when the surrounding function returns.
+                        This means that if you defer a function inside a loop, all the deferred calls will accumulate and only execute after the entire function completes.
+                        This can lead to excessive resource usage and potential memory leaks.
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func wrongReadFiles(files []string) error {
+	for file := range files {
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		defer f.Close() // Close will not be called till the end of the function
+	}
+	return nil
+}` }
+						}
+					</div>
+
+                    <p class="mt-2">
+                        There are 2 popular ways to avoid this issue:
+                    </p>
+
+					<h3 id="errtwoone" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#errtwoone" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Use closures to manage resource lifetimes within the loop iteration
+						</a>
+					</h3>
+
+                    <p class="mt-2">
+                        By using an anonymous function, you can ensure that resources are properly closed at the end of each iteration.
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func correctReadFilesClosure(files []string) error {
+	for _, file := range files {
+		err := func() error {
+			f, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+
+			defer f.Close()
+
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}` }
+						}
+					</div>
+
+					<h3 id="errtwotwo" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#errtwotwo" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+                            Use helper functions to encapsulate resource management
+						</a>
+					</h3>
+
+                    <p class="mt-2">
+                        By delegating resource management to a separate function, you can ensure that resources are properly closed after each operation.
+                        This is more popular way to handle this situation, as it leads to cleaner and more maintainable code.
+                        It's more readable than using closures in most cases.
+                        Furthermore we can test the helper function independently.
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func readFile(file string) {
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		defer f.Close()
+}
+
+func correctReadFiles(files []string) error {
+	for file := range files {
+		readFile(file)
+	}
+	return nil
+}` }
 						}
 					</div>
 
