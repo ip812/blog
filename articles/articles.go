@@ -26,7 +26,7 @@ var Metadata = []ArticleMetadata{
 		URL:         "/p/public/articles/" + strconv.FormatUint(DeferDeepDiveID, 10),
 		Name:        "Defer in Go: Deep Dive",
 		Description: "How defer works in Go, common pitfalls and best practices.",
-		ReadTimeMinutes: 3,
+		ReadTimeMinutes: 8,
 	},
 	{
 		ID:          AnsiblePlusTailsclaleEqualGreatComboID,

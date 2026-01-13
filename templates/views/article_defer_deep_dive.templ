@@ -301,7 +301,7 @@ func correctErrorHandling() (err error) {
         if r := recover(); r != nil {
 	    		err = fmt.Errorf("no worries, recovered from panic: %v", r)
         }
-  }()
+    }()
 	panic("trigger panic for demonstration")
 }
 // no worries, recovered from panic: trigger panic for demonstration}` }
