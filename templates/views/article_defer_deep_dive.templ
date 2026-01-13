@@ -28,25 +28,187 @@ templ ArticleDeferDeepDive() {
 						<h1 class="text-3xl font-semibold leading-tight">{ deferDeepDiveMetadata.Name }</h1>
                         <h3 class="text-md text-gray-500 mt-2 font-bold">{ fmt.Sprintf("%d min read", deferDeepDiveMetadata.ReadTimeMinutes) }</h3>
 					</header>
-					<div class="mt-6">
+
+					<h2 id="introduction" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#introduction" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+							Introduction
+						</a>
+					</h2>
+					<p class="mt-2">
+                        <b>defer</b> is a keyword in Go that allows developers to schedule a function call to be executed when the surrounding function returns.
+                        This powerful feature guarantees that the deferred function will run on every exit path—whether the function completes normally or exits due to a panic.
+                        The concept is similar to RAII in C++ or try–finally in Java: cleanup or finalization logic is guaranteed to run when control leaves a scope.
+                        In this article, I’ll explain how <b>defer</b> works, explore common usage patterns, and highlight frequent pitfalls—and how to avoid them.
+					</p>
+
+					<h2 id="overview" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#overview" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Overview
+						</a>
+					</h2>
+					<p class="mt-2">
+                        Let's start with a simple example to illustrate how <b>defer</b> works in Go.
+                        Consider the following code snippet:
+					</p>
+
+					<div>
 						@code.Code(code.Props{
 							Language:       "go",
 							ShowCopyButton: true,
-							Size:           code.SizeSm,
+							Size:           code.SizeLg,
 						}) {
 							{ 
-`package main
+`func readFile(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
 
-import "fmt"
+	buffer := make([]byte, 100)
+	_, err = file.Read(buffer)
+	if err != nil {
+        file.Close()
+		return "", err
+	}
 
-func main() {
-    fmt.Println("Hello, World!")
+    file.Close()
+	return string(buffer), nil
 }` }
 						}
 					</div>
-					<img class="w-full h-auto my-6" src="https://www.jaegertracing.io//img/jaeger-logo.png" alt="Defer Deep Dive"/>
 					<p>
-						Some Go code.
+                        In this example, we open a file and read its contents. However, if an error occurs during the read operation, we must remember to close the file before returning.
+                        This can lead to code duplication and potential resource leaks if we forget to close the file in every error path.
+                        In this case it is easy to spot all the return paths, but in more complex functions it can be easy to miss one.
+                        To address this issue, we can use <b>defer</b> to ensure that the file is closed when the function exits, regardless of how it exits:
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func readFile(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+    defer file.Close()
+
+	buffer := make([]byte, 100)
+	_, err = file.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+
+	return string(buffer), nil
+}` }
+						}
+					</div>
+                    <p>
+                        In this revised version, we use <b>defer file.Close()</b> immediately after opening the file.
+                        This ensures that the file will be closed when the function returns, regardless of whether it returns due to an error or completes successfully.
+                        This not only simplifies the code but also enhances its readability and maintainability.
+                    </p>
+
+					<h2 id="threedeferrules" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#threedeferrules" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    3 Rules of Defer
+						</a>
+					</h2>
+                    <p class="mt-2">
+                        Above we saw a basic usage of <b>defer</b>, but there are some important rules and best practices to keep in mind when using it.
+                        Here are three important rules to keep in mind when using <b>defer</b> in Go:
+                    </p>
+
+					<h2 id="ruleone" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#ruleone" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Rule 1: Deferred function calls are executed in Last In First Out order after the surrounding function returns
+						</a>
+					</h2>
+
+                    <p class="mt-2">
+                        This means that if you have multiple <b>defer</b> statements in a function, they will be executed in reverse order(LIFO) of their appearance when the function exits.
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func lifo() {
+	fmt.Println("LIFO")
+	defer fmt.Println("First Deferred")
+	defer fmt.Println("Second Deferred")
+	defer fmt.Println("Third Deferred")
+}
+// LIFO
+// Third Deferred
+// Second Deferred
+// First Deferred` }
+						}
+					</div>
+
+					<h2 id="ruletwo" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#ruletwo" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Rule 2: A deferred function’s arguments are evaluated when the defer statement is evaluate 
+						</a>
+					</h2>
+
+                    <p class="mt-2">
+                        When using <b>defer</b>, keep in mind that all arguments—including the receiver—are evaluated right away, not when the deferred function runs. 
+                        The example below demonstrates this:
+                    </p>
+
+					<div>
+						@code.Code(code.Props{
+							Language:       "go",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{ 
+`func captureByValue()  {
+	file := "file1.txt"
+	defer printFileContent(file)
+
+	file = "file2.txt"
+}` }
+						}
+					</div>
+
+                    <p class="mt-2">
+                        In this example, file is evaluated immediately when the <b>defer</b> statement is encountered. 
+                        That means when <b>printFileContent</b> is eventually called, it still refers to <b>"file1.txt"</b>, even though file was later reassigned to <b>"file2.txt"</b>.
+                        This behavior can feel unintuitive at first, but it’s deliberate. 
+                        When you reuse a variable to open multiple files, deferring <b>Close</b> ensures that each file is closed correctly—at the point it was opened—rather than closing only the last one.
+                    </p>
+                    <p class="mt-2">
+                        However, if you want to avoid this behaviour there are two common approaches:
+                    </p>
+
+					<h3 id="ruletwoclousre" class="text-2xl font-bold mb-2 group">
+						<a href="#ruletwoclosure" class="text-xl text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						    Use a closure to capture the variable by reference 
+						</a>
+					</h3>
+
+                    <p>
+                        However, if you want to avoid this behaviour there are two common approaches:
+                    </p>
+
+					<h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#conclusion" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
+							Conclusion
+						</a>
+					</h2>
+
+					<p class="mt-0">
+					    I hope after reading this article, that you have a deeper understanding of how <b>defer</b> works in Go.
+                        It is a powerful feature that, when used correctly, can greatly enhance the readability and maintainability of your code.
+                        By following best practices and being aware of common pitfalls, you can leverage <b>defer</b> to write cleaner and more efficient Go programs.
 					</p>
 
 					<div class="mt-12">
