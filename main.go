@@ -59,6 +59,8 @@ func main() {
 	snowflake.SetStartTime(startTime)
 	snowflake.SetMachineID(1)
 
+	fmt.Println(snowflake.ID())
+
 	slacknotifier := notifier.NewSlack(cfg.Slack.BlogBotToken, log)
 
 	swappableDB := NewSwappableDB()
@@ -121,8 +123,8 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 		defer cancel()
 
 		db, err := otelsql.Open(
-			"postgres", 
-			connectionString, 
+			"postgres",
+			connectionString,
 			otelsql.WithAttributes(
 				semconv.DBSystemNamePostgreSQL,
 			),
@@ -133,7 +135,7 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 		}
 
 		_, err = otelsql.RegisterDBStatsMetrics(
-			db, 
+			db,
 			otelsql.WithAttributes(
 				semconv.DBSystemNamePostgreSQL,
 			),
@@ -165,10 +167,10 @@ func connectToDatabaseWithRetry(ctx context.Context, cfg *config.Config, log log
 }
 
 func startHTTPServer(
-	cfg *config.Config, 
-	log logger.Logger, 
+	cfg *config.Config,
+	log logger.Logger,
 	tracer oteltrace.Tracer,
-	db DBWrapper, 
+	db DBWrapper,
 	slacknotifier *notifier.Slack,
 ) *http.Server {
 	formDecoder := form.NewDecoder()

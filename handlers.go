@@ -27,10 +27,10 @@ import (
 )
 
 var (
-        opsNewCommentsReceived = promauto.NewGauge(prometheus.GaugeOpts{
-                Name: "blog_new_comments_received_total",
-                Help: "Total number of new comments received",
-        })
+	opsNewCommentsReceived = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "blog_new_comments_received_total",
+		Help: "Total number of new comments received",
+	})
 )
 
 //go:embed static
