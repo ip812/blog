@@ -25,8 +25,8 @@ var Metadata = []ArticleMetadata{
 	{
 		ID:              SelfManagedObservabilityStackID,
 		URL:             "/p/public/articles/" + strconv.FormatUint(SelfManagedObservabilityStackID, 10),
-		Name:            "From Grafana Cloud to a self-managed observability stack",
-		Description:     "Why I decided to manage my own observability stack for my homelab and how I did it.",
+		Name:            "A Practical Observability Architecture for Go apps",
+		Description:     "Why I decided to manage my own observability stack and how I did it.",
 		ReadTimeMinutes: 10,
 	},
 	{
