@@ -15,6 +15,14 @@ var ProjectsData = []struct {
 	Description string
     CreatedAt   uint64
 }{
+    {
+		Name: "knav",
+		URL:  "https://github.com/iypetrov/knav",
+		Description: `A simple CLI tool, inspired by kubectx, 
+            that makes it easy to manage multiple kubeconfig 
+            files when working with kubectl.`,
+        CreatedAt: utils.DiscordEpoch + snowflake.ParseID(1493880098284113920).Timestamp,
+	},
 	{
 		Name: "Terraform Provider gitsync",
 		URL:  "https://registry.terraform.io/providers/ip812/gitsync/latest",
