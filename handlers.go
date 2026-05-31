@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/ip812/blog/config"
 	"github.com/ip812/blog/database"
 	"github.com/ip812/blog/logger"
-	"github.com/ip812/blog/notifier"
 	"github.com/ip812/blog/status"
 	"github.com/ip812/blog/templates/components"
 	"github.com/ip812/blog/templates/views"
@@ -41,7 +39,6 @@ type Handler struct {
 	formDecoder   *form.Decoder
 	formValidator *validator.Validate
 	tracer        oteltrace.Tracer
-	slacknotifier *notifier.Slack
 	log           logger.Logger
 
 	db DBWrapper
@@ -206,19 +203,6 @@ func (hnd *Handler) CreateComment(w http.ResponseWriter, r *http.Request) error 
 
 	opsNewCommentsReceived.Inc()
 	hnd.log.Info("comment created successfully for article ID %d", articleID)
-	if err := hnd.slacknotifier.SendMsg(
-		hnd.config.Slack.GeneralChannelID,
-		fmt.Sprintf(
-			"New comment for article *%s* was added:\n>%s\n>%s",
-			articles.GetByID(articleID).Name,
-			"https://blog.ip812.com/p/public/articles/"+strconv.FormatUint(articleID, 10),
-			props.Content,
-		),
-	); err != nil {
-		hnd.log.Error("failed to send Slack notification for new comment: %v", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
 
 	commentProps := []components.CommentProps{}
 	for _, c := range comments {
