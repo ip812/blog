@@ -48,7 +48,7 @@ templ ArticleSystemdGoApp() {
                         
 
 					<h2 id="overview" class="text-2xl font-bold mt-8 mb-4 group">
-						<a href="#overview" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
+						<a href="#overview" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Overview">
 							Overview
 						</a>
 					</h2>
@@ -68,31 +68,498 @@ templ ArticleSystemdGoApp() {
                         coordinated configuration reloads. Since it is a superset of <b>notify</b>, we'll use <b>notify-reload</b> throughout this article to demonstrate the complete set of production-ready capabilities.
                         To interact with systemd from Go, we'll use the popular <a href="https://github.com/coreos/go-systemd" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">go-systemd</a> library from CoreOS, which provides Go bindings for the systemd notification protocol and other systemd APIs.
 					</p>
+
+					<h2 id="implementation" class="text-2xl font-bold mt-8 mb-4 group">
+						<a href="#implementation" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Implementation">
+							Implementation
+						</a>
+					</h2>
+					<p class="mt-2">
+                        Below is a minimal Go web server written with nothing but the standard library. It will serve as our starting point - from here we'll incrementally extend it into a systemd-aware service.
+					</p>
 					<div>
 						@code.Code(code.Props{
 							Language:       "go",
 							ShowCopyButton: true,
 							Size:           code.SizeLg,
 						}) {
-							{ 
-`func readFile(filename string) (string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
+							{
+`package main
 
-	buffer := make([]byte, 100)
-	_, err = file.Read(buffer)
-	if err != nil {
-        file.Close()
-		return "", err
-	}
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
 
-    file.Close()
-	return string(buffer), nil
+func main() {
+	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "foo")
+	})
+
+	fmt.Println("Server starting on :3000")
+	if err := http.ListenAndServe(":3000", nil); err != nil {
+		log.Fatal(err)
+	}
 }` }
 						}
 					</div>
+
+					<p class="mt-2">
+                        Before we start extending the server, a quick word on <b>sd_notify</b> itself. It is not an HTTP call or a systemd-specific library call - it is a tiny wire protocol built on top of a <a href="https://man7.org/linux/man-pages/man2/socket.2.html" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer"><b>SOCK_DGRAM</b></a> Unix domain socket. Each notification is a single datagram of newline-separated <b>KEY=VALUE</b> pairs (for example <b>READY=1</b>, <b>STATUS=Serving requests</b>, or <b>RELOADING=1\nMONOTONIC_USEC=12345</b>). Systemd creates the socket, passes its path to the service via the <b>NOTIFY_SOCKET</b> environment variable, and reads whatever the process writes to it. Anything that can open a Unix datagram socket can speak the protocol - no linking against <b>libsystemd</b> is required, which is why the <b>go-systemd</b> library is a pure-Go implementation. Its <b>daemon.SdNotify(unsetEnvironment, state)</b> function opens the socket, writes the datagram, and returns <b>(sent bool, err error)</b>. When <b>NOTIFY_SOCKET</b> is empty, it returns <b>(false, nil)</b> immediately, which makes it safe to call unconditionally - but wrapping the whole systemd path in an explicit guard, as we do below, keeps the intent obvious and lets us skip building any of the surrounding lifecycle machinery when running outside systemd.
+					</p>
+					<p class="mt-2">
+                        When a service is of type <b>notify</b> or <b>notify-reload</b>, systemd populates the <b>NOTIFY_SOCKET</b> environment variable with the path to this socket. Our first addition is a check for that variable - if it isn't set, the application is running outside of systemd, so the <b>sd_notify</b> calls become a no-op.
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go-diff",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{
+`package main
+
+ import (
+ 	"fmt"
+ 	"log"
++	"log/slog"
+ 	"net/http"
++	"os"
+ )
+
+ func main() {
++	if os.Getenv("NOTIFY_SOCKET") == "" {
++		slog.Warn("NOTIFY_SOCKET is not set; sd_notify support is disabled")
++		return
++	}
++
+ 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+ 		fmt.Fprintf(w, "foo")
+ 	})
+
+ 	fmt.Println("Server starting on :3000")
+ 	if err := http.ListenAndServe(":3000", nil); err != nil {
+ 		log.Fatal(err)
+ 	}
+}` }
+						}
+					</div>
+
+					<p class="mt-2">
+                        With the guard in place, we can send our first real notification: <b>READY=1</b>. This tells systemd that startup is complete and the service is prepared to receive traffic. Anything registered to depend on this unit (via <b>After=</b> / <b>Requires=</b>) is held back by systemd until this message arrives, so the notification must be sent <em>after</em> the listener is bound and any warm-up work is done - not from an <b>init()</b> or the top of <b>main()</b>. In the diff below we bind the listener first, run a short warm-up, then notify.
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go-diff",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{
+`package main
+
+ import (
+ 	"fmt"
+ 	"log"
+ 	"log/slog"
++	"net"
+ 	"net/http"
+ 	"os"
++	"time"
++
++	"github.com/coreos/go-systemd/v22/daemon"
+ )
+
+ func main() {
+ 	if os.Getenv("NOTIFY_SOCKET") == "" {
+ 		slog.Warn("NOTIFY_SOCKET is not set; sd_notify support is disabled")
+ 		return
+ 	}
+
++	ln, err := net.Listen("tcp", ":3000")
++	if err != nil {
++		log.Fatalf("listen: %v", err)
++	}
++
+ 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+ 		fmt.Fprintf(w, "foo")
+ 	})
+
+-	fmt.Println("Server starting on :3000")
+-	if err := http.ListenAndServe(":3000", nil); err != nil {
+-		log.Fatal(err)
+-	}
++	// Simulate startup work - config load, DB connect, cache warm, etc.
++	// Type=notify holds dependents until READY=1, so this delay is observable.
++	slog.Info("warming up...")
++	time.Sleep(2 * time.Second)
++
++	go func() {
++		if err := http.Serve(ln, nil); err != nil {
++			log.Fatalf("http serve: %v", err)
++		}
++	}()
++
++	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
++		slog.Warn("sd_notify READY failed", "err", err)
++	} else {
++		slog.Info("notified systemd: READY=1")
++	}
+}` }
+						}
+					</div>
+
+					<p class="mt-2">
+                        Next comes the shutdown path. When systemd wants to stop the service - because of <b>systemctl stop</b>, a reboot, or an <b>OnFailure=</b> action - it sends <b>SIGTERM</b> to the main process. We install a signal handler and, on receiving <b>SIGTERM</b> or <b>SIGINT</b>, notify systemd with <b>STOPPING=1</b> before gracefully draining in-flight HTTP requests. The <b>STOPPING=1</b> message lets systemd distinguish "the process is going away on purpose" from "the process crashed", which matters for restart policies and dependency ordering.
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go-diff",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{
+`package main
+
+ import (
++	"context"
+ 	"fmt"
+ 	"log"
+ 	"log/slog"
+ 	"net"
+ 	"net/http"
+ 	"os"
++	"os/signal"
++	"syscall"
+ 	"time"
+
+ 	"github.com/coreos/go-systemd/v22/daemon"
+ )
+
+ func main() {
+ 	if os.Getenv("NOTIFY_SOCKET") == "" {
+ 		slog.Warn("NOTIFY_SOCKET is not set; sd_notify support is disabled")
+ 		return
+ 	}
+
+ 	ln, err := net.Listen("tcp", ":3000")
+ 	if err != nil {
+ 		log.Fatalf("listen: %v", err)
+ 	}
+
+-	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
++	mux := http.NewServeMux()
++	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+ 		fmt.Fprintf(w, "foo")
+ 	})
++	srv := &http.Server{Handler: mux}
+
+ 	slog.Info("warming up...")
+ 	time.Sleep(2 * time.Second)
+
+ 	go func() {
+-		if err := http.Serve(ln, nil); err != nil {
++		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+ 			log.Fatalf("http serve: %v", err)
+ 		}
+ 	}()
+
+ 	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+ 		slog.Warn("sd_notify READY failed", "err", err)
+ 	} else {
+ 		slog.Info("notified systemd: READY=1")
+ 	}
+
++	sigs := make(chan os.Signal, 1)
++	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
++	<-sigs
++
++	if _, err := daemon.SdNotify(false, daemon.SdNotifyStopping); err != nil {
++		slog.Warn("sd_notify STOPPING failed", "err", err)
++	} else {
++		slog.Info("notified systemd: STOPPING=1")
++	}
++
++	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
++	defer cancel()
++	if err := srv.Shutdown(ctx); err != nil {
++		slog.Warn("graceful shutdown failed, forcing", "err", err)
++		_ = srv.Close()
++	}
+}` }
+						}
+					</div>
+
+					<p class="mt-2">
+                        The final piece is hot-reload support. With <b>Type=notify-reload</b>, systemd sends <b>SIGHUP</b> to the main process on <b>systemctl reload</b> and waits for a <b>RELOADING=1</b> notification followed by a <b>READY=1</b> once the reload finishes. The <b>RELOADING=1</b> message must be sent in the same datagram as <b>MONOTONIC_USEC=</b>, which is the value of <b>CLOCK_MONOTONIC</b> in microseconds at the moment the reload starts. Systemd uses this timestamp to detect duplicate or stale reload notifications - if a second reload is triggered before the first finishes, the older <b>MONOTONIC_USEC</b> lets systemd drop the outdated <b>READY=1</b>.
+					</p>
+					<p class="mt-2">
+                        Structurally, this turns the single <b>&lt;-sigs</b> receive into a <b>for</b> loop with a <b>select</b>: <b>SIGHUP</b> triggers a reload and continues the loop, while <b>SIGTERM</b> / <b>SIGINT</b> break out of it. The reload itself is deliberately simulated with a <b>time.Sleep</b> - in a real service, this is where you'd re-read your config file, rebuild your handler, or refresh a TLS certificate before sending <b>READY=1</b> back.
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go-diff",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{
+`package main
+
+ import (
+ 	"context"
+ 	"fmt"
+ 	"log"
+ 	"log/slog"
+ 	"net"
+ 	"net/http"
+ 	"os"
+ 	"os/signal"
+ 	"syscall"
+ 	"time"
+
+ 	"github.com/coreos/go-systemd/v22/daemon"
+ )
+
+ func main() {
+ 	if os.Getenv("NOTIFY_SOCKET") == "" {
+ 		slog.Warn("NOTIFY_SOCKET is not set; sd_notify support is disabled")
+ 		return
+ 	}
+
+ 	ln, err := net.Listen("tcp", ":3000")
+ 	if err != nil {
+ 		log.Fatalf("listen: %v", err)
+ 	}
+
+ 	mux := http.NewServeMux()
+ 	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+ 		fmt.Fprintf(w, "foo")
+ 	})
+ 	srv := &http.Server{Handler: mux}
+
++	// Anchor for MONOTONIC_USEC. sd_notify(3) requires the value be in the
++	// same datagram as RELOADING=1 and measured against CLOCK_MONOTONIC.
++	monotonicEpoch := time.Now()
++
+ 	slog.Info("warming up...")
+ 	time.Sleep(2 * time.Second)
+
+ 	go func() {
+ 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+ 			log.Fatalf("http serve: %v", err)
+ 		}
+ 	}()
+
+ 	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+ 		slog.Warn("sd_notify READY failed", "err", err)
+ 	} else {
+ 		slog.Info("notified systemd: READY=1")
+ 	}
+
+ 	sigs := make(chan os.Signal, 1)
+-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+-	<-sigs
++	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
++
++	// SIGHUP -> reload (continue the loop). SIGTERM/SIGINT -> break and shut down.
++	for sig := range sigs {
++		if sig == syscall.SIGHUP {
++			monotonicUSec := uint64(time.Since(monotonicEpoch) / time.Microsecond)
++			msg := fmt.Sprintf("%s\nMONOTONIC_USEC=%d", daemon.SdNotifyReloading, monotonicUSec)
++			if _, err := daemon.SdNotify(false, msg); err != nil {
++				slog.Warn("sd_notify RELOADING failed", "err", err)
++			} else {
++				slog.Info("notified systemd: RELOADING=1", "monotonic_usec", monotonicUSec)
++			}
++
++			// Simulate re-reading config, rebuilding handlers, rotating certs, ...
++			time.Sleep(500 * time.Millisecond)
++
++			if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
++				slog.Warn("sd_notify READY (post-reload) failed", "err", err)
++			} else {
++				slog.Info("reload done, notified systemd: READY=1")
++			}
++			continue
++		}
++		break // SIGTERM or SIGINT
++	}
+
+ 	if _, err := daemon.SdNotify(false, daemon.SdNotifyStopping); err != nil {
+ 		slog.Warn("sd_notify STOPPING failed", "err", err)
+ 	} else {
+ 		slog.Info("notified systemd: STOPPING=1")
+ 	}
+
+ 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+ 	defer cancel()
+ 	if err := srv.Shutdown(ctx); err != nil {
+ 		slog.Warn("graceful shutdown failed, forcing", "err", err)
+ 		_ = srv.Close()
+ 	}
+}` }
+						}
+					</div>
+
+					<p class="mt-2">
+                        There's one more mechanism worth wiring up: the systemd watchdog. If the unit file sets <b>WatchdogSec=</b>, systemd expects the service to send <b>WATCHDOG=1</b> notifications at least that often. If a ping doesn't arrive in time, systemd concludes the process is deadlocked and kills it - usually with <b>SIGABRT</b> to produce a core dump - then restarts it according to the unit's <b>Restart=</b> policy. This is fundamentally different from the earlier notifications: <b>READY</b>, <b>STOPPING</b>, and <b>RELOADING</b> are lifecycle events, whereas <b>WATCHDOG</b> is a periodic liveness heartbeat. It's the systemd equivalent of a Kubernetes liveness probe.
+					</p>
+					<p class="mt-2">
+                        Two details make or break a watchdog implementation. First, ping at roughly <b>half</b> the configured interval - the convention documented by systemd itself - so scheduling jitter, GC pauses, or a slow syscall don't push a ping past the deadline. Second, and much more important, gate the ping on a real health signal. A goroutine that unconditionally pings every N seconds proves only that <em>the goroutine</em> is alive - if the main request loop deadlocks or a critical dependency dies, systemd will happily keep receiving heartbeats from a broken process. In the diff below, we track an atomic <b>healthy</b> flag that a real service would flip off on serious failure (database connection lost, event loop stalled, etc.), and the watchdog goroutine only pings while it's true. The <b>go-systemd</b> library exposes <b>daemon.SdWatchdogEnabled</b>, which reads the interval from the <b>WATCHDOG_USEC</b> environment variable systemd sets and returns <b>0</b> when the watchdog is disabled - a natural way to skip starting the ticker at all when it isn't configured.
+					</p>
+					<div>
+						@code.Code(code.Props{
+							Language:       "go-diff",
+							ShowCopyButton: true,
+							Size:           code.SizeLg,
+						}) {
+							{
+`package main
+
+ import (
+ 	"context"
+ 	"fmt"
+ 	"log"
+ 	"log/slog"
+ 	"net"
+ 	"net/http"
+ 	"os"
+ 	"os/signal"
++	"sync/atomic"
+ 	"syscall"
+ 	"time"
+
+ 	"github.com/coreos/go-systemd/v22/daemon"
+ )
+
++// healthy is the single source of truth for "should we tell systemd we're
++// alive?". A real service flips this off if the DB connection dies, the
++// request loop stalls, or any other critical dependency fails.
++var healthy atomic.Bool
++
+ func main() {
+ 	if os.Getenv("NOTIFY_SOCKET") == "" {
+ 		slog.Warn("NOTIFY_SOCKET is not set; sd_notify support is disabled")
+ 		return
+ 	}
+
+ 	ln, err := net.Listen("tcp", ":3000")
+ 	if err != nil {
+ 		log.Fatalf("listen: %v", err)
+ 	}
+
+ 	mux := http.NewServeMux()
+ 	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+ 		fmt.Fprintf(w, "foo")
+ 	})
+ 	srv := &http.Server{Handler: mux}
+
+ 	monotonicEpoch := time.Now()
+
+ 	slog.Info("warming up...")
+ 	time.Sleep(2 * time.Second)
++	healthy.Store(true)
+
+ 	go func() {
+ 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+ 			log.Fatalf("http serve: %v", err)
+ 		}
+ 	}()
+
+ 	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+ 		slog.Warn("sd_notify READY failed", "err", err)
+ 	} else {
+ 		slog.Info("notified systemd: READY=1")
+ 	}
+
++	stopWatchdog := startWatchdog()
++	defer stopWatchdog()
++
+ 	sigs := make(chan os.Signal, 1)
+ 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+
+ 	for sig := range sigs {
+ 		if sig == syscall.SIGHUP {
++			healthy.Store(false)
+ 			monotonicUSec := uint64(time.Since(monotonicEpoch) / time.Microsecond)
+ 			msg := fmt.Sprintf("%s\nMONOTONIC_USEC=%d", daemon.SdNotifyReloading, monotonicUSec)
+ 			if _, err := daemon.SdNotify(false, msg); err != nil {
+ 				slog.Warn("sd_notify RELOADING failed", "err", err)
+ 			} else {
+ 				slog.Info("notified systemd: RELOADING=1", "monotonic_usec", monotonicUSec)
+ 			}
+
+ 			time.Sleep(500 * time.Millisecond)
+
++			healthy.Store(true)
+ 			if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+ 				slog.Warn("sd_notify READY (post-reload) failed", "err", err)
+ 			} else {
+ 				slog.Info("reload done, notified systemd: READY=1")
+ 			}
+ 			continue
+ 		}
+ 		break
+ 	}
+
++	healthy.Store(false)
+ 	if _, err := daemon.SdNotify(false, daemon.SdNotifyStopping); err != nil {
+ 		slog.Warn("sd_notify STOPPING failed", "err", err)
+ 	} else {
+ 		slog.Info("notified systemd: STOPPING=1")
+ 	}
+
+ 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+ 	defer cancel()
+ 	if err := srv.Shutdown(ctx); err != nil {
+ 		slog.Warn("graceful shutdown failed, forcing", "err", err)
+ 		_ = srv.Close()
+ 	}
+}
++
++// startWatchdog pings systemd at half the configured interval, but only while
++// healthy.Load() is true. Returns a stop function that shuts the ticker down.
++// If WatchdogSec= is not set in the unit file, this is a no-op.
++func startWatchdog() func() {
++	interval, err := daemon.SdWatchdogEnabled(false)
++	if err != nil {
++		slog.Warn("watchdog probe failed", "err", err)
++		return func() {}
++	}
++	if interval == 0 {
++		slog.Info("watchdog disabled (no WatchdogSec= in unit)")
++		return func() {}
++	}
++	slog.Info("watchdog enabled", "ping_every", interval/2)
++
++	stop := make(chan struct{})
++	done := make(chan struct{})
++	go func() {
++		defer close(done)
++		t := time.NewTicker(interval / 2)
++		defer t.Stop()
++		for {
++			select {
++			case <-stop:
++				return
++			case <-t.C:
++				if healthy.Load() {
++					_, _ = daemon.SdNotify(false, daemon.SdNotifyWatchdog)
++				}
++			}
++		}
++	}()
++	return func() {
++		close(stop)
++		<-done
++	}
++}` }
+						}
+					</div>
+
+					<p class="mt-2">
+                        With this in place, a corresponding unit file entry such as <b>WatchdogSec=30s</b> is all systemd needs to enable the mechanism - the process will get pinged every 15 seconds while healthy, and systemd will restart it if 30 seconds pass without a ping. Pairing this with <b>Restart=on-watchdog</b> or <b>Restart=always</b> gives you automatic recovery from soft hangs that a plain process-crash policy would never catch.
+					</p>
 					<h2 id="conclusion" class="text-2xl font-bold mt-8 mb-4 group">
 						<a href="#conclusion" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Conclusion">
 							Conclusion

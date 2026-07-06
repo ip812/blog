@@ -25,7 +25,7 @@ type Props struct {
 }
 
 templ Code(props ...Props) {
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/pojoaque.min.css"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"/>
 	{{ var p Props }}
 	if len(props) > 0 {
 		{{ p = props[0] }}
@@ -76,4 +76,5 @@ templ Code(props ...Props) {
 
 templ Script() {
 	<script defer src="/static/js/code.min.js"></script>
+	<script defer src="/static/js/hljs-go-diff.js"></script>
 }
