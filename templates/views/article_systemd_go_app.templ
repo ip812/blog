@@ -33,11 +33,20 @@ templ ArticleSystemdGoApp() {
 						</a>
 					</h2>
 					<p class="mt-2">
-						<b>defer</b> is a keyword in Go that allows developers to schedule a function call to be executed when the surrounding function returns.
-						This powerful feature guarantees that the deferred function will run on every exit path—whether the function completes normally or exits due to a panic.
-						The concept is similar to RAII in C++ or try–finally in Java: cleanup or finalization logic is guaranteed to run when control leaves a scope.
-						In this article, I’ll explain how <b>defer</b> works, explore common usage patterns, and highlight frequent pitfalls—and how to avoid them.
+                        Nowadays, the majority of production applications run in containerized environments, most commonly on Kubernetes clusters.
+                        This approach provides numerous benefits, including portability, scalability, and a standardized API for managing workloads across environments.
+                        It has become the industry standard for modern application deployment.
+                        However, every rule has its exceptions. There are scenarios where running an application outside of Kubernetes is the more appropriate choice.
+                        One simple and reliable alternative for Go applications is systemd. Systemd is the standard system and service manager for most modern Linux distributions,
+                        replacing the older SysV init system. It is much more than a process launcher - it provides a rich ecosystem for service management, dependency handling, logging, automatic restarts, resource control, and system initialization.
+                        Here are two common scenarios where systemd is preferred over Kubernetes:
 					</p>
+					<ul class="list-disc list-inside space-y-2">
+						<li>Deploying applications on resource-constrained devices, such as IoT hardware or lightweight edge systems. In these environments, running Kubernetes or even Docker often introduces unnecessary overhead. When the workload consists of a single application on a single machine, a systemd service is typically simpler, consumes fewer resources, and is easier to operate.</li>
+						<li>Infrastructure agents that must remain available regardless of the Kubernetes control plane's health. Consider a logging agent. Running it as a Kubernetes DaemonSet is the standard approach, but it has an important limitation - the pod exists only as long as the kubelet can communicate with the Kubernetes API server. If the kubelet encounters networking issues, crashes, or other failures, the DaemonSet may never be scheduled or restarted. Ironically, this is often the exact moment when collecting kubelet logs is most valuable for troubleshooting. Running the logging agent as a native systemd service ensures that it starts with the operating system and continues running independently of Kubernetes, allowing it to capture logs even when the cluster itself is experiencing problems.</li>
+					</ul>
+                        
+
 					<h2 id="overview" class="text-2xl font-bold mt-8 mb-4 group">
 						<a href="#overview" class="text-gray-900 hover:text-blue-600 cursor-pointer" aria-label="Link to Introduction">
 							Overview
