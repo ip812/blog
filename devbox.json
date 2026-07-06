@@ -1,6 +1,9 @@
 {
   "packages": [
     "go@1.24.3",
+    "gopls@0.22.0",
+    "goimports@2021-01-13",
+    "golangci-lint@2.12.2",
     "air@1.62.0",
     "sqlc@1.29.0",
     "templ@0.3.924"

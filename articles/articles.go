@@ -19,9 +19,17 @@ var (
 	AnsiblePlusTailsclaleEqualGreatComboID uint64 = 1428744843063988224
 	DeferDeepDiveID                        uint64 = 1458103253970456576
 	SelfManagedObservabilityStackID        uint64 = 1463957572842164224
+	SystemdGoApp                           uint64 = 1523603957669171200
 )
 
 var Metadata = []ArticleMetadata{
+	{
+		ID:              SystemdGoApp,
+		URL:             "/p/public/articles/" + strconv.FormatUint(SystemdGoApp, 10),
+		Name:            "Write a production-ready Go systemd service",
+		Description:     "Build a Go application that follows best practices for implementing a reliable, production-ready systemd service.",
+		ReadTimeMinutes: 10,
+	},
 	{
 		ID:              SelfManagedObservabilityStackID,
 		URL:             "/p/public/articles/" + strconv.FormatUint(SelfManagedObservabilityStackID, 10),

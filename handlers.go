@@ -103,6 +103,11 @@ func (hnd *Handler) ArticleDetailsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if id == articles.SystemdGoApp {
+		utils.Render(w, r, views.ArticleSystemdGoApp())
+		return
+	}
+
 	utils.Render(w, r, views.ArticleNotFound())
 }
 
