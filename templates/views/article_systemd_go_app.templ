@@ -53,8 +53,21 @@ templ ArticleSystemdGoApp() {
 						</a>
 					</h2>
 					<p class="mt-2">
-						Let's start with a simple example to illustrate how <b>defer</b> works in Go.
-						Consider the following code snippet:
+                        In this blog post, I'll show you how to build a production-ready Go application that follows the best practices for running as a systemd service.
+                        The good news is that there is nothing inherently different about writing an application that runs under systemd. From the application's perspective,
+                        it is just another process. The same principles that apply to any production-grade Go service apply here as well.
+                        Whether the application runs as a Kubernetes workload or as a native systemd service makes little difference to the application itself.
+                        The main difference lies in how the service communicates its lifecycle and health status to its supervisor.
+                        In Kubernetes, this is typically achieved through readiness and liveness probes. The application exposes an HTTP endpoint (for example, /healthz`)
+                        that returns a 200 OK response when the service is healthy. Kubernetes periodically probes this endpoint and uses the response to determine whether
+                        the application is ready to receive traffic or needs to be restarted.
+                        Systemd takes a different approach. Instead of polling an HTTP endpoint, it communicates with the service over a Unix domain socket.
+                        The application sends status notifications to the systemd process (PID 1), informing it when startup has completed, whether the service is healthy,
+                        when it is reloading, and when it is shutting down. It's important to note that not every systemd service type supports these notifications.
+                        Systemd defines several service types, such as `simple`, `exec`, `forking`, `oneshot`, `notify`, and `notify-reload`. Only the `notify` and `notify-reload`
+                        service types support the notification protocol used for health reporting and lifecycle events. The `notify-reload` type extends `notify` by also supporting
+                        coordinated configuration reloads. Since it is a superset of `notify`, we'll use `notify-reload` throughout this article to demonstrate the complete set of production-ready capabilities.
+                        To interact with systemd from Go, we'll use the popular `go-systemd` library from CoreOS, which provides Go bindings for the systemd notification protocol and other systemd APIs.
 					</p>
 					<div>
 						@code.Code(code.Props{
