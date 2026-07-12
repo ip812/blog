@@ -36,21 +36,3 @@ jobs:
       run: |
         docker tag iypetrov/blog:${{ github.ref_name }} ghcr.io/iypetrov/blog:${{ github.ref_name }}
         docker push ghcr.io/iypetrov/blog:${{ github.ref_name }}
-
-  update-image:
-    needs: build-and-push-image-to-ecr
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Trigger update image
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.GH_ACCESS_TOKEN }}
-          repository: "ip812/infra"
-          event-type: update-image
-          client-payload: |
-            {
-              "image_name": "ghcr.io/iypetrov/blog",
-              "image_tag": "${{ github.ref_name }}",
-              "commit_url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-            }
